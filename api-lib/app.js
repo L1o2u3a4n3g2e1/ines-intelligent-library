@@ -5,7 +5,7 @@ import multer from 'multer';
 import path from 'node:path';
 import fs from 'node:fs';
 import config from './config.js';
-import { getDatabaseState, getPool, initializeDatabase } from './db.js';
+import { getPool, initializeDatabase, getDatabaseState } from './db.js';
 import UserRepository from './repositories/userRepository.js';
 import TokenService from './services/tokenService.js';
 import EmailService from './services/emailService.js';
@@ -35,51 +35,6 @@ const resolveToken = (request) => {
   return request.cookies?.ml_auth_token || null;
 };
 
-const buildRuntimeReadiness = () => {
-  const databaseState = getDatabaseState();
-  const checks = {
-    database: {
-      required: true,
-      ready: databaseState.mode === 'database' && Boolean(databaseState.ready),
-      reason:
-        databaseState.mode === 'database' && databaseState.ready
-          ? null
-          : config.database.configured
-            ? databaseState.error || databaseState.lastError?.message || 'Database connection failed'
-            : 'Missing DATABASE_URL or PGHOST/PGUSER/PGPASSWORD/PGDATABASE',
-    },
-    email: {
-      required: false,
-      ready: Boolean(config.mail.configured),
-      reason: config.mail.configured ? null : 'Missing MAIL_HOST, MAIL_USERNAME, or MAIL_PASSWORD',
-    },
-    sms: {
-      required: false,
-      ready: Boolean(config.sms.configured),
-      reason: config.sms.configured ? null : 'Missing live SMS provider credentials',
-    },
-    jwt: {
-      required: true,
-      ready: Boolean(config.jwtConfigured),
-      reason: config.jwtConfigured ? null : 'JWT_SECRET is still using the default placeholder',
-    },
-  };
-
-  const runtimeMode =
-    databaseState.mode === 'demo'
-      ? 'demo'
-      : checks.database.ready
-        ? 'real'
-        : 'degraded';
-
-  return {
-    ready: ['database', 'jwt'].every((key) => checks[key].ready),
-    deliveryReady: ['email', 'sms'].every((key) => checks[key].ready),
-    runtimeMode,
-    checks,
-  };
-};
-
 const buildServices = () => {
   const pool = getPool();
   const userRepository = new UserRepository(pool);
@@ -103,7 +58,7 @@ const publicDir = path.join(process.cwd(), 'public');
 const indexHtmlPath = path.join(publicDir, 'index.html');
 const schemaReady = initializeDatabase();
 const services = buildServices();
-const isDemoMode = () => config.allowDemoMode && getDatabaseState().mode === 'demo';
+const isDemoMode = () => getDatabaseState().mode === 'demo';
 
 const resolveAuthService = () => (isDemoMode() ? services.demoAuthService : services.authService);
 
@@ -117,6 +72,42 @@ const getCurrentUserResult = async (request) => {
 
   const authService = resolveAuthService();
   return authService.getCurrentUser(token);
+};
+
+const buildRuntimeReadiness = () => {
+  const databaseState = getDatabaseState();
+  const checks = {
+    database: {
+      required: true,
+      ready: databaseState.mode === 'database',
+      reason:
+        databaseState.mode === 'database'
+          ? null
+          : config.database.configured
+            ? databaseState.error || 'Database connection failed'
+            : 'Missing DATABASE_URL or MYSQLHOST/MYSQLUSER/MYSQLPASSWORD/MYSQLDATABASE',
+    },
+    email: {
+      required: true,
+      ready: Boolean(config.mail.configured),
+      reason: config.mail.configured ? null : 'Missing MAIL_HOST, MAIL_USERNAME, or MAIL_PASSWORD',
+    },
+    sms: {
+      required: true,
+      ready: Boolean(config.sms.configured),
+      reason: config.sms.configured ? null : 'Missing Africa\'s Talking credentials or SMS_PROVIDER=africastalking',
+    },
+    jwt: {
+      required: true,
+      ready: Boolean(config.jwtConfigured),
+      reason: config.jwtConfigured ? null : 'JWT_SECRET is still using the default placeholder',
+    },
+  };
+
+  return {
+    ready: Object.values(checks).every((check) => check.ready || !check.required),
+    checks,
+  };
 };
 
 const app = express();
@@ -157,10 +148,9 @@ app.get('/api/health', async (_request, response) => {
       {
         status: 'ok',
         database: 'disconnected',
-        mode: readiness.runtimeMode,
+        mode: 'demo',
         message: databaseState.error || 'Running in demo mode',
         production_ready: readiness.ready,
-        delivery_ready: readiness.deliveryReady,
         readiness: readiness.checks,
       },
       'Digital Library API is running'
@@ -174,9 +164,8 @@ app.get('/api/health', async (_request, response) => {
     {
       status: 'ok',
       database: rows[0]?.ok === 1 ? 'connected' : 'unknown',
-      mode: readiness.runtimeMode,
+      mode: 'database',
       production_ready: readiness.ready,
-      delivery_ready: readiness.deliveryReady,
       readiness: readiness.checks,
     },
     'Digital Library API is running'
@@ -190,8 +179,6 @@ app.get('/api/health/ready', (_request, response) => {
     {
       app_env: config.appEnv,
       production_ready: readiness.ready,
-      delivery_ready: readiness.deliveryReady,
-      runtime_mode: readiness.runtimeMode,
       mode: isDemoMode() ? 'demo' : 'database',
       checks: readiness.checks,
     },

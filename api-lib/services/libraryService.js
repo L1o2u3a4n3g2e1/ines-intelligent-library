@@ -104,7 +104,7 @@ export default class LibraryService {
       await this.pool.execute(
         `INSERT INTO user_metrics (user_id, metrics, created_at, updated_at)
          VALUES (?, ?, NOW(), NOW())
-         ON CONFLICT (user_id) DO UPDATE SET metrics = EXCLUDED.metrics, updated_at = NOW()`,
+         ON DUPLICATE KEY UPDATE metrics = VALUES(metrics), updated_at = NOW()`,
         [userId, JSON.stringify(empty)]
       );
       return empty;
@@ -126,7 +126,7 @@ export default class LibraryService {
     await this.pool.execute(
       `INSERT INTO user_metrics (user_id, metrics, created_at, updated_at)
        VALUES (?, ?, NOW(), NOW())
-       ON CONFLICT (user_id) DO UPDATE SET metrics = EXCLUDED.metrics, updated_at = NOW()`,
+       ON DUPLICATE KEY UPDATE metrics = VALUES(metrics), updated_at = NOW()`,
       [userId, JSON.stringify(normalized)]
     );
   }

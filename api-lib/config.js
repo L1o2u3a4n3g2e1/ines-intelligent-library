@@ -20,87 +20,50 @@ const parseNumber = (value, fallback) => {
 };
 
 const configuredAppUrl = process.env.APP_URL || '';
-const normalizeUrl = (value) => {
-  const trimmed = String(value || '').trim();
-  if (!trimmed) return '';
-  return /^https?:\/\//i.test(trimmed) ? trimmed : `https://${trimmed}`;
-};
-const vercelProductionUrl = normalizeUrl(process.env.VERCEL_PROJECT_PRODUCTION_URL);
-const publicAppUrl = normalizeUrl(process.env.PUBLIC_APP_URL);
-const deploymentUrl = normalizeUrl(process.env.VERCEL_URL);
-const configuredFrontendUrl = normalizeUrl(process.env.FRONTEND_URL);
-const configuredAppUrlNormalized = normalizeUrl(configuredAppUrl);
-const configuredDatabaseUrl =
-  process.env.DATABASE_URL ||
-  process.env.POSTGRES_URL ||
-  process.env.POSTGRES_PRISMA_URL ||
-  process.env.POSTGRES_URL_NON_POOLING ||
-  process.env.MYSQL_URL ||
-  process.env.MYSQL_PUBLIC_URL ||
-  '';
 const defaultPort = parseNumber(process.env.PORT, 3001);
-const defaultJwtSecret = 'change-this-secret-before-production';
-const appEnv = process.env.APP_ENV || 'development';
-const isProduction = appEnv === 'production';
-const allowDemoMode = parseBoolean(process.env.ALLOW_DEMO_MODE, !isProduction);
-
+const configuredDatabaseUrl = process.env.DATABASE_URL || process.env.MYSQL_URL || process.env.MYSQL_PUBLIC_URL || '';
 const databaseConfigured = Boolean(
   configuredDatabaseUrl ||
-    (
-      (process.env.PGHOST || process.env.POSTGRES_HOST || process.env.MYSQLHOST || process.env.DB_HOST) &&
-      (process.env.PGUSER || process.env.POSTGRES_USER || process.env.MYSQLUSER || process.env.DB_USER) &&
-      (process.env.PGDATABASE || process.env.POSTGRES_DATABASE || process.env.MYSQLDATABASE || process.env.DB_NAME)
-    )
+    ((process.env.MYSQLHOST || process.env.DB_HOST) &&
+      (process.env.MYSQLUSER || process.env.DB_USER) &&
+      (process.env.MYSQLDATABASE || process.env.DB_NAME))
 );
-
 const emailConfigured = Boolean(process.env.MAIL_HOST && process.env.MAIL_USERNAME && process.env.MAIL_PASSWORD);
 const smsConfigured = Boolean(
-  (
-    (
-      (process.env.SMS_PROVIDER || '').toLowerCase() === 'africastalking' ||
-      (process.env.SMS_MODE || '').toLowerCase() === 'live'
-    ) &&
-      (process.env.AT_USERNAME || process.env.SMS_USERNAME) &&
-      (process.env.AT_API_KEY || process.env.SMS_API_KEY)
-  ) ||
-  (
-    (process.env.SMS_PROVIDER || '').toLowerCase() === 'smsgateway' &&
-      Boolean(process.env.SMSGATEWAY_API_KEY)
-  )
+  (process.env.SMS_PROVIDER || '').toLowerCase() === 'africastalking' &&
+    (process.env.AT_USERNAME || process.env.SMS_USERNAME) &&
+    (process.env.AT_API_KEY || process.env.SMS_API_KEY)
 );
+const defaultJwtSecret = 'change-this-secret-before-production';
 const jwtConfigured = Boolean(process.env.JWT_SECRET && process.env.JWT_SECRET !== defaultJwtSecret);
 
 const config = {
   appName: process.env.APP_NAME || 'Digital Library',
-  appEnv,
-  isProduction,
-  allowDemoMode,
-  appUrl: configuredAppUrlNormalized || configuredAppUrl,
+  appEnv: process.env.APP_ENV || 'development',
+  isProduction: (process.env.APP_ENV || 'development') === 'production',
+  appUrl: configuredAppUrl,
   frontendUrl:
-    (isProduction && (publicAppUrl || vercelProductionUrl)) ||
-    configuredFrontendUrl ||
-    configuredAppUrlNormalized ||
-    deploymentUrl ||
-    `http://localhost:${defaultPort}`,
+    process.env.FRONTEND_URL ||
+    configuredAppUrl ||
+    (process.env.VERCEL_URL ? `https://${process.env.VERCEL_URL}` : `http://localhost:${defaultPort}`),
   port: defaultPort,
-  jwtSecret: process.env.JWT_SECRET || defaultJwtSecret,
+  jwtSecret: process.env.JWT_SECRET || 'change-this-secret-before-production',
   jwtExpiry: process.env.JWT_EXPIRY || '7d',
   jwtConfigured,
   defaultJwtSecret,
   verificationCodeLength: parseNumber(process.env.VERIFICATION_CODE_LENGTH, 6),
-  verificationCodeExpirySeconds: Math.max(3600, parseNumber(process.env.VERIFICATION_CODE_EXPIRY, 3600)),
+  verificationCodeExpirySeconds: parseNumber(process.env.VERIFICATION_CODE_EXPIRY, 900),
   maxUploadSize: parseNumber(process.env.MAX_UPLOAD_SIZE, 50 * 1024 * 1024),
   logLevel: process.env.LOG_LEVEL || 'info',
-  databaseConfigured,
   database: {
     url: configuredDatabaseUrl,
-    host: process.env.PGHOST || process.env.POSTGRES_HOST || process.env.MYSQLHOST || process.env.DB_HOST || '',
-    port: parseNumber(process.env.PGPORT || process.env.POSTGRES_PORT || process.env.MYSQLPORT || process.env.DB_PORT, 5432),
-    user: process.env.PGUSER || process.env.POSTGRES_USER || process.env.MYSQLUSER || process.env.DB_USER || '',
-    password: process.env.PGPASSWORD || process.env.POSTGRES_PASSWORD || process.env.MYSQLPASSWORD || process.env.DB_PASSWORD || '',
-    name: process.env.PGDATABASE || process.env.POSTGRES_DATABASE || process.env.MYSQLDATABASE || process.env.DB_NAME || '',
+    host: process.env.MYSQLHOST || process.env.DB_HOST || '',
+    port: parseNumber(process.env.MYSQLPORT || process.env.DB_PORT, 3306),
+    user: process.env.MYSQLUSER || process.env.DB_USER || '',
+    password: process.env.MYSQLPASSWORD || process.env.DB_PASSWORD || '',
+    name: process.env.MYSQLDATABASE || process.env.DB_NAME || '',
     configured: databaseConfigured,
-    ssl: parseBoolean(process.env.DB_SSL ?? process.env.POSTGRES_SSL ?? process.env.MYSQL_SSL, false),
+    ssl: parseBoolean(process.env.DB_SSL || process.env.MYSQL_SSL, false),
     sslRejectUnauthorized: parseBoolean(process.env.DB_SSL_REJECT_UNAUTHORIZED, false),
   },
   allowedOrigins: Array.from(
@@ -111,8 +74,6 @@ const config = {
         'http://localhost:3001',
         'http://127.0.0.1:3001',
         ...parseCsv(process.env.ALLOWED_ORIGINS),
-        publicAppUrl,
-        vercelProductionUrl,
         process.env.FRONTEND_URL,
         process.env.APP_URL,
       ].filter(Boolean)
@@ -134,8 +95,6 @@ const config = {
     username: process.env.AT_USERNAME || process.env.SMS_USERNAME || '',
     apiKey: process.env.AT_API_KEY || process.env.SMS_API_KEY || '',
     senderId: process.env.AT_SENDER_ID || process.env.SMS_SENDER_ID || '',
-    smsgatewayApiKey: process.env.SMSGATEWAY_API_KEY || '',
-    smsgatewayDeviceId: process.env.SMSGATEWAY_DEVICE_ID || '',
     configured: smsConfigured,
   },
 };

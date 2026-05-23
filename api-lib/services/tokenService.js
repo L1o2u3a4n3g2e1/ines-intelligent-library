@@ -1,6 +1,7 @@
 import jwt from 'jsonwebtoken';
 import crypto from 'node:crypto';
 import config from '../config.js';
+import { toMysqlDateTime } from '../repositories/userRepository.js';
 
 export default class TokenService {
   signPayload(payload, expiresIn = config.jwtExpiry) {
@@ -34,7 +35,8 @@ export default class TokenService {
   }
 
   getVerificationCodeExpiry(seconds = config.verificationCodeExpirySeconds) {
-    return new Date(Date.now() + seconds * 1000);
+    const value = new Date(Date.now() + seconds * 1000);
+    return toMysqlDateTime(value);
   }
 
   generateOpaqueToken(bytes = 32) {

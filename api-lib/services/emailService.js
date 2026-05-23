@@ -3,17 +3,6 @@ import config from '../config.js';
 import { nowMysql } from '../repositories/userRepository.js';
 
 const formatNow = () => nowMysql();
-const formatVerificationLifetime = () => {
-  const seconds = Number(config.verificationCodeExpirySeconds || 3600);
-  const minutes = Math.max(1, Math.round(seconds / 60));
-
-  if (minutes % 60 === 0) {
-    const hours = minutes / 60;
-    return hours === 1 ? '1 hour' : `${hours} hours`;
-  }
-
-  return `${minutes} minutes`;
-};
 
 export default class EmailService {
   constructor(userRepository) {
@@ -90,14 +79,13 @@ export default class EmailService {
 
   async sendVerificationEmail(userId, email, userName, code) {
     const subject = `${config.appName} - Verify Your Email`;
-    const lifetime = formatVerificationLifetime();
-    const html = `<h2>${config.appName}</h2><p>Hi ${userName},</p><p>Use this verification code to finish registration:</p><p style="font-size:28px;font-weight:bold;letter-spacing:4px;">${code}</p><p>This code expires in ${lifetime}.</p>`;
+    const html = `<h2>${config.appName}</h2><p>Hi ${userName},</p><p>Use this verification code to finish registration:</p><p style="font-size:28px;font-weight:bold;letter-spacing:4px;">${code}</p><p>This code expires in 15 minutes.</p>`;
     return this.sendMail({
       userId,
       to: email,
       subject,
       html,
-      text: `Your verification code is ${code}. It expires in ${lifetime}.`,
+      text: `Your verification code is ${code}. It expires in 15 minutes.`,
     });
   }
 

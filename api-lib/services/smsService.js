@@ -8,10 +8,6 @@ export default class SmsService {
     this.userRepository = userRepository;
   }
 
-  getSmsGatewayEndpoint() {
-    return 'https://smsgateway.me/api/send';
-  }
-
   getMessagingEndpoint(mode) {
     if (mode === 'sandbox') {
       return 'https://api.sandbox.africastalking.com/version1/messaging';
@@ -29,10 +25,6 @@ export default class SmsService {
       return 'simulated';
     }
 
-    if (config.sms.provider === 'smsgateway') {
-      return config.sms.smsgatewayApiKey ? 'live' : 'unconfigured';
-    }
-
     if (config.sms.provider === 'africastalking') {
       if (config.sms.username && config.sms.apiKey) {
         return config.isProduction ? 'live' : 'sandbox';
@@ -46,72 +38,6 @@ export default class SmsService {
   async sendGuestVerificationCode(userId, phone, code) {
     const mode = this.resolveMode();
     const message = `Your ${config.appName} guest verification code is ${code}.`;
-
-    if (config.sms.provider === 'smsgateway' && mode === 'live') {
-      const payload = {
-        phone_number: phone,
-        message,
-      };
-
-      if (config.sms.smsgatewayDeviceId) {
-        payload.device_id = config.sms.smsgatewayDeviceId;
-      }
-
-      try {
-        const response = await fetch(this.getSmsGatewayEndpoint(), {
-          method: 'POST',
-          headers: {
-            Accept: 'application/json',
-            'Content-Type': 'application/json',
-            Authorization: `Basic ${Buffer.from(`${config.sms.smsgatewayApiKey}:`).toString('base64')}`,
-          },
-          body: JSON.stringify(payload),
-        });
-
-        const rawText = await response.text();
-        let parsed = null;
-        try {
-          parsed = JSON.parse(rawText);
-        } catch {
-          parsed = null;
-        }
-
-        if (!response.ok) {
-          throw new Error(parsed?.error || parsed?.message || rawText || 'SMS Gateway rejected the SMS request');
-        }
-
-        await this.userRepository.persistSmsLog({
-          userId,
-          recipientPhone: phone,
-          message,
-          status: 'sent',
-          errorMessage: null,
-          sentAt: formatNow(),
-        });
-
-        return {
-          success: true,
-          delivery: 'live',
-          message: 'SMS sent successfully',
-          error: null,
-        };
-      } catch (error) {
-        await this.userRepository.persistSmsLog({
-          userId,
-          recipientPhone: phone,
-          message,
-          status: 'failed',
-          errorMessage: error.message,
-        });
-
-        return {
-          success: false,
-          delivery: 'live',
-          message: 'Failed to send SMS',
-          error: error.message,
-        };
-      }
-    }
 
     if (mode === 'live') {
       const payload = new URLSearchParams({

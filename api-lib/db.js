@@ -1,18 +1,13 @@
-import { neon } from '@neondatabase/serverless';
-import pg from 'pg';
+import mysql from 'mysql2/promise';
 import config from './config.js';
 import { ensureSchema } from './schema.js';
 import MockPool from './mockDb.js';
 
-const { Pool } = pg;
-
 let pool;
 let schemaPromise;
 let databaseState = {
-  mode: 'uninitialized',
-  ready: false,
+  mode: 'database',
   error: null,
-  lastError: null,
 };
 
 const parseConnectionUrl = (value) => {
@@ -23,187 +18,57 @@ const parseConnectionUrl = (value) => {
   try {
     const url = new URL(value);
     return {
-      protocol: url.protocol,
       host: url.hostname,
-      port: Number(url.port || 5432),
+      port: Number(url.port || 3306),
       user: decodeURIComponent(url.username || ''),
       password: decodeURIComponent(url.password || ''),
       database: decodeURIComponent(url.pathname.replace(/^\//, '') || ''),
-      sslmode: url.searchParams.get('sslmode') || '',
     };
   } catch {
     return null;
   }
 };
 
-const convertPlaceholders = (sql) => {
-  let index = 0;
-  return String(sql).replace(/\?/g, () => `$${++index}`);
-};
-
-class PostgresPoolAdapter {
-  constructor(pgPool) {
-    this.pgPool = pgPool;
-  }
-
-  async query(sql, params = []) {
-    const text = convertPlaceholders(sql);
-    const result = await this.pgPool.query({ text, values: params });
-    const isSelect = /^\s*(select|with)\b/i.test(sql);
-
-    if (isSelect) {
-      return [result.rows, result];
-    }
-
-    return [
-      {
-        affectedRows: result.rowCount || 0,
-        rowCount: result.rowCount || 0,
-        insertId: null,
-      },
-      result,
-    ];
-  }
-
-  async execute(sql, params = []) {
-    const wantsInsertId = /^\s*insert\b/i.test(sql) && !/\breturning\b/i.test(sql);
-    const text = wantsInsertId ? `${convertPlaceholders(sql)} RETURNING id` : convertPlaceholders(sql);
-    const result = await this.pgPool.query({ text, values: params });
-    const isSelect = /^\s*(select|with)\b/i.test(sql);
-
-    if (isSelect) {
-      return [result.rows, result];
-    }
-
-    return [
-      {
-        affectedRows: result.rowCount || 0,
-        rowCount: result.rowCount || 0,
-        insertId: result.rows?.[0]?.id ?? null,
-      },
-      result,
-    ];
-  }
-
-  async end() {
-    await this.pgPool.end();
-  }
-}
-
-class NeonHttpAdapter {
-  constructor(connectionString) {
-    this.connectionString = connectionString;
-    this.client = neon(connectionString);
-  }
-
-  async query(sql, params = []) {
-    const result = await this.client.query(convertPlaceholders(sql), params);
-    const isSelect = /^\s*(select|with)\b/i.test(sql);
-
-    if (isSelect) {
-      return [result, { rows: result, rowCount: Array.isArray(result) ? result.length : 0 }];
-    }
-
-    return [
-      {
-        affectedRows: Array.isArray(result) ? result.length : 0,
-        rowCount: Array.isArray(result) ? result.length : 0,
-        insertId: null,
-      },
-      { rows: result, rowCount: Array.isArray(result) ? result.length : 0 },
-    ];
-  }
-
-  async execute(sql, params = []) {
-    const wantsInsertId = /^\s*insert\b/i.test(sql) && !/\breturning\b/i.test(sql);
-    const text = wantsInsertId ? `${convertPlaceholders(sql)} RETURNING id` : convertPlaceholders(sql);
-    const result = await this.client.query(text, params);
-    const isSelect = /^\s*(select|with)\b/i.test(sql);
-
-    if (isSelect) {
-      return [result, { rows: result, rowCount: Array.isArray(result) ? result.length : 0 }];
-    }
-
-    return [
-      {
-        affectedRows: Array.isArray(result) ? result.length : 0,
-        rowCount: Array.isArray(result) ? result.length : 0,
-        insertId: result?.[0]?.id ?? null,
-      },
-      { rows: result, rowCount: Array.isArray(result) ? result.length : 0 },
-    ];
-  }
-
-  async end() {
-    return undefined;
-  }
-}
-
 const resolveConnectionConfig = () => {
   const fromUrl =
     parseConnectionUrl(config.database.url) ||
     parseConnectionUrl(process.env.DATABASE_URL) ||
-    parseConnectionUrl(process.env.POSTGRES_URL) ||
-    parseConnectionUrl(process.env.POSTGRES_PRISMA_URL) ||
-    parseConnectionUrl(process.env.POSTGRES_URL_NON_POOLING);
-
-  const sslRequested = config.database.ssl || fromUrl?.sslmode === 'require';
+    parseConnectionUrl(process.env.MYSQL_URL) ||
+    parseConnectionUrl(process.env.MYSQL_PUBLIC_URL);
 
   return {
     host: fromUrl?.host || config.database.host || '127.0.0.1',
-    port: Number(fromUrl?.port || config.database.port || 5432),
-    user: fromUrl?.user || config.database.user || 'postgres',
+    port: Number(fromUrl?.port || config.database.port || 3306),
+    user: fromUrl?.user || config.database.user || 'root',
     password: fromUrl?.password || config.database.password || '',
-    database: fromUrl?.database || config.database.name || 'postgres',
-    connectionString: config.database.url || undefined,
-    max: Number(process.env.DB_CONNECTION_LIMIT || 10),
-    ssl: sslRequested
-      ? { rejectUnauthorized: config.database.sslRejectUnauthorized }
-      : false,
+    database: fromUrl?.database || config.database.name || 'multilingual_library',
+    waitForConnections: true,
+    connectionLimit: Number(process.env.DB_CONNECTION_LIMIT || 10),
+    queueLimit: 0,
+    charset: 'utf8mb4',
+    ssl: config.database.ssl ? { rejectUnauthorized: config.database.sslRejectUnauthorized } : undefined,
   };
 };
 
-const shouldUseNeonHttp = () =>
-  Boolean(
-    config.database.url &&
-      /(?:^postgres(?:ql)?:\/\/).*?(?:neon\.tech|aws\.neon\.tech)/i.test(config.database.url)
-  );
-
-export const getDatabaseState = () => ({ ...databaseState });
-
 export const getPool = () => {
   if (!pool) {
-    pool = shouldUseNeonHttp()
-      ? new NeonHttpAdapter(config.database.url)
-      : new PostgresPoolAdapter(new Pool(resolveConnectionConfig()));
+    pool = mysql.createPool(resolveConnectionConfig());
   }
 
   return pool;
 };
 
+export const getDatabaseState = () => ({ ...databaseState });
+
 export const initializeDatabase = async () => {
   if ((config.isProduction || process.env.VERCEL) && !config.database.configured) {
-    if (config.allowDemoMode) {
-      pool = new MockPool();
-      databaseState = {
-        mode: 'demo',
-        ready: false,
-        error: 'Database environment variables are not configured',
-        lastError: null,
-      };
-      schemaPromise = Promise.resolve(pool);
-      return pool;
-    }
-
-    const error = new Error('Database environment variables are not configured');
+    pool = new MockPool();
     databaseState = {
-      mode: 'database',
-      ready: false,
-      error: error.message,
-      lastError: error,
+      mode: 'demo',
+      error: 'Database environment variables are not configured',
     };
-    schemaPromise = null;
-    throw error;
+    schemaPromise = Promise.resolve(pool);
+    return pool;
   }
 
   const currentPool = getPool();
@@ -211,35 +76,14 @@ export const initializeDatabase = async () => {
   if (!schemaPromise) {
     schemaPromise = ensureSchema(currentPool, config)
       .then(() => {
-        databaseState = {
-          mode: 'database',
-          ready: true,
-          error: null,
-          lastError: null,
-        };
+        databaseState = { mode: 'database', error: null };
         return currentPool;
       })
       .catch((error) => {
-        if ((config.isProduction || process.env.VERCEL) && config.allowDemoMode) {
-          console.warn('Database connection failed, using demo mode:', error.message);
-          pool = new MockPool();
-          databaseState = {
-            mode: 'demo',
-            ready: false,
-            error: error.message,
-            lastError: error,
-          };
-          return pool;
-        }
-
-        databaseState = {
-          mode: 'database',
-          ready: false,
-          error: error.message,
-          lastError: error,
-        };
-        schemaPromise = null;
-        throw error;
+        console.warn('Database connection failed, using demo mode:', error.message);
+        pool = new MockPool();
+        databaseState = { mode: 'demo', error: error.message };
+        return pool;
       });
   }
 
