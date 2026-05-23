@@ -74,20 +74,31 @@ export default function Navbar() {
             <Logo to={user ? '/dashboard' : '/'} iconSize={34} textSize="text-lg" />
           </div>
 
-          {/* Center: search */}
-          <div className="flex-1 max-w-md mx-4 hidden md:block">
-            <form onSubmit={handleSearch} className="relative">
-              <FiSearch className="absolute left-3.5 top-1/2 -translate-y-1/2 text-brand-500" size={16} />
+          {/* Center: nav + search */}
+          <div className="flex-1 flex items-center gap-5 mx-6">
+            <div className="hidden lg:flex items-center gap-6">
+              <Link to="/about" className="text-sm font-medium text-gray-700 hover:text-brand-600 transition-colors">
+                {t('aboutUs') || 'About'}
+              </Link>
+              <Link to="/services" className="text-sm font-medium text-gray-700 hover:text-brand-600 transition-colors">
+                {t('services') || 'Services'}
+              </Link>
+              <Link to="/settings" className="text-sm font-medium text-gray-700 hover:text-brand-600 transition-colors">
+                {t('settings') || 'Settings'}
+              </Link>
+            </div>
+            <form onSubmit={handleSearch} className="relative max-w-sm hidden md:block ml-auto">
+              <FiSearch className="absolute left-3 top-1/2 -translate-y-1/2 text-gray-400" size={15} />
               <input
                 ref={searchRef}
                 value={searchQuery}
                 onChange={e => setSearchQuery(e.target.value)}
                 placeholder={t('search')}
-                className="input-field pl-10 pr-10 py-2.5 text-sm h-10"
+                className="input-field pl-9 pr-9 py-2 text-sm h-9 w-full"
               />
               <button type="button" onClick={startVoiceSearch}
-                className={`absolute right-3 top-1/2 -translate-y-1/2 text-brand-500 hover:text-brand-600 transition-colors ${listening ? 'animate-mic' : ''}`}>
-                <FiMic size={15} />
+                className={`absolute right-2.5 top-1/2 -translate-y-1/2 text-gray-400 hover:text-brand-500 transition-colors ${listening ? 'animate-mic' : ''}`}>
+                <FiMic size={14} />
               </button>
             </form>
           </div>
@@ -117,7 +128,7 @@ export default function Navbar() {
               <button onClick={() => { setShowLang(v => !v); setShowNotifs(false); setShowProfile(false); }}
                 className="btn-ghost p-2 rounded-xl flex items-center gap-1">
                 <FiGlobe size={18} />
-                <span className="text-xs font-semibold hidden sm:block uppercase">{language}</span>
+                <span className="text-xs font-semibold hidden sm:block">{language === 'en' ? '🇬🇧 EN' : '🇷🇼 RW'}</span>
               </button>
               <AnimatePresence>
                 {showLang && (

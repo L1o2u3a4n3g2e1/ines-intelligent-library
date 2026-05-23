@@ -1,0 +1,106 @@
+{
+  "commands": {
+    "soma igitabo": {
+      "english": "read book",
+      "kinyarwanda": "soma igitabo",
+      "category": "action"
+    },
+    "ikurikira": {
+      "english": "next page",
+      "kinyarwanda": "ikurikira",
+      "category": "navigation"
+    },
+    "isubire inyuma": {
+      "english": "previous page",
+      "kinyarwanda": "isubire inyuma",
+      "category": "navigation"
+    },
+    "subira inyuma": {
+      "english": "go back",
+      "kinyarwanda": "subira inyuma",
+      "category": "navigation"
+    },
+    "imberezanisha": {
+      "english": "search",
+      "kinyarwanda": "imberezanisha",
+      "category": "action"
+    },
+    "reka": {
+      "english": "pause",
+      "kinyarwanda": "reka",
+      "category": "control"
+    },
+    "komeza": {
+      "english": "resume",
+      "kinyarwanda": "komeza",
+      "category": "control"
+    },
+    "hagarara": {
+      "english": "stop",
+      "kinyarwanda": "hagarara",
+      "category": "control"
+    },
+    "menya": {
+      "english": "help",
+      "kinyarwanda": "menya",
+      "category": "action"
+    },
+    "guhinga": {
+      "english": "settings",
+      "kinyarwanda": "guhinga",
+      "category": "menu"
+    },
+    "impapyi": {
+      "english": "books",
+      "kinyarwanda": "impapyi",
+      "category": "content"
+    },
+    "abigize": {
+      "english": "authors",
+      "kinyarwanda": "abigize",
+      "category": "content"
+    },
+    "ubwoko": {
+      "english": "category",
+      "kinyarwanda": "ubwoko",
+      "category": "filter"
+    },
+    "siba": {
+      "english": "download",
+      "kinyarwanda": "siba",
+      "category": "action"
+    },
+    "sangiza": {
+      "english": "share",
+      "kinyarwanda": "sangiza",
+      "category": "action"
+    },
+    "ongeraho": {
+      "english": "bookmark",
+      "kinyarwanda": "ongeraho",
+      "category": "action"
+    }
+  },
+  "vocabulary": {
+    "intangiriro": "introduction",
+    "ihango": "library",
+    "murugo": "home",
+    "ibibazo": "questions",
+    "ubwiyunge": "profile",
+    "amakuru": "news",
+    "inyandiko": "documents",
+    "igipande": "page",
+    "umwaka": "year",
+    "icyumviro": "feedback",
+    "kwishyura": "pay",
+    "ubwenge": "wisdom",
+    "igitsina": "category",
+    "icyondi": "month",
+    "ubwenge": "knowledge",
+    "guhitamo": "select",
+    "kwandika": "write",
+    "kumvira": "listen",
+    "kureba": "view",
+    "kugira ngaruko": "create"
+  }
+}

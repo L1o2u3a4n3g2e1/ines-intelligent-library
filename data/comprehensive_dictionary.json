@@ -1,0 +1,20 @@
+{
+  "commands": {
+    "soma igitabo": { "english": "read book", "category": "action" },
+    "ikurikira": { "english": "next page", "category": "navigation" },
+    "isubire inyuma": { "english": "previous page", "category": "navigation" },
+    "subira inyuma": { "english": "go back", "category": "navigation" },
+    "imberezanisha": { "english": "search", "category": "action" },
+    "reka": { "english": "pause", "category": "control" },
+    "komeza": { "english": "resume", "category": "control" },
+    "hagarara": { "english": "stop", "category": "control" },
+    "menya": { "english": "help", "category": "action" },
+    "guhinga": { "english": "settings", "category": "menu" },
+    "impapyi": { "english": "books", "category": "content" },
+    "abigize": { "english": "authors", "category": "content" },
+    "ubwoko": { "english": "category", "category": "filter" },
+    "siba": { "english": "download", "category": "action" },
+    "sangiza": { "english": "share", "category": "action" },
+    "ongeraho": { "english": "bookmark", "category": "action" }
+  }
+}

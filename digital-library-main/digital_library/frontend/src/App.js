@@ -17,6 +17,9 @@ import ReadBook from './pages/Reader';
 import Profile from './pages/Profile';
 import Bookmarks from './pages/Bookmarks';
 import AdminDashboard from './pages/AdminDashboard';
+import AboutUs from './pages/AboutUs';
+import Services from './pages/Services';
+import Settings from './pages/Settings';
 
 import './styles/globals.css';
 
@@ -46,6 +49,8 @@ function AppRoutes() {
     <Routes>
       {/* Public */}
       <Route path="/" element={<Landing />} />
+      <Route path="/about" element={<AboutUs />} />
+      <Route path="/services" element={<Services />} />
       <Route path="/login" element={<PublicRoute><Login /></PublicRoute>} />
       <Route path="/register" element={<PublicRoute><Register /></PublicRoute>} />
       <Route path="/verify-email" element={<PublicRoute><VerifyEmail /></PublicRoute>} />
@@ -61,12 +66,12 @@ function AppRoutes() {
       <Route path="/read/:id" element={<ProtectedRoute><ReadBook /></ProtectedRoute>} />
       <Route path="/profile" element={<ProtectedRoute><Profile /></ProtectedRoute>} />
       <Route path="/bookmarks" element={<ProtectedRoute><Bookmarks /></ProtectedRoute>} />
+      <Route path="/settings" element={<ProtectedRoute><Settings /></ProtectedRoute>} />
       <Route path="/admin" element={<ProtectedRoute><AdminDashboard /></ProtectedRoute>} />
 
       {/* Aliases */}
       <Route path="/history" element={<Navigate to="/dashboard" replace />} />
       <Route path="/audio" element={<Navigate to="/search" replace />} />
-      <Route path="/settings" element={<Navigate to="/profile" replace />} />
 
       {/* 404 */}
       <Route path="*" element={<Navigate to="/" replace />} />

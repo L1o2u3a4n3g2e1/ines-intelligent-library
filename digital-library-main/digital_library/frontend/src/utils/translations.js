@@ -4,7 +4,7 @@ const t = {
     appName: 'Digital Library', tagline: 'Read, Listen & Learn in Your Language',
     search: 'Search books, authors, topics…', voiceSearch: 'Search with voice',
     login: 'Sign In', register: 'Get Started', logout: 'Sign Out',
-    dashboard: 'Dashboard', books: 'Books', upload: 'Upload',
+    dashboard: 'Dashboard', books: 'Books', upload: 'Upload', aboutUs: 'About Us',
     bookmarks: 'Bookmarks', history: 'History', audio: 'Audio Library',
     settings: 'Settings', profile: 'Profile', admin: 'Admin',
     welcome: 'Welcome back', recommended: 'Recommended for You',
@@ -198,6 +198,34 @@ const t = {
     statusActive: 'Active', statusInactive: 'Inactive',
     yes: 'Yes', no: 'No',
     tabOverview: '📊 Overview', tabUsers: '👤 Users', tabBooks: '📚 Books',
+
+    // ── About Us ──────────────────────────────────────────
+    aboutUs: 'About Us', ourMission: 'Our Mission',
+    missionText: 'To democratize access to knowledge across Africa by providing multilingual digital books with AI-powered voice search and translation, making reading accessible to everyone regardless of literacy level or language.',
+    ourVision: 'Our Vision',
+    visionText: 'A world where language and literacy are no barriers to learning and growth. Where every person can read, listen, and learn in their own language.',
+    whyWeExist: 'Why We Exist',
+    whyText: 'Traditional libraries are often inaccessible in rural areas, expensive, and limited to one language. We built Digital Library to break these barriers.',
+    ourTeam: 'Our Team',
+    teamText: 'A passionate group of developers, educators, and accessibility advocates from Rwanda committed to bringing quality content to underserved communities.',
+
+    // ── Services ──────────────────────────────────────────
+    services: 'Services',
+    serviceVoiceSearch: 'Voice Search', serviceVoiceSearchDesc: 'Search thousands of books by speaking in English or Kinyarwanda',
+    serviceTranslation: 'Instant Translation', serviceTranslationDesc: 'Translate any passage between languages with one tap',
+    serviceAudioBooks: 'Audio Books', serviceAudioBooksDesc: 'Listen to books with AI-generated narration in your preferred voice',
+    serviceUpload: 'Book Upload', serviceUploadDesc: 'Share your books with the community in any format and language',
+    serviceLowLit: 'Low Literacy Mode', serviceLowLitDesc: 'Accessible interface with larger text, icons, and voice guidance',
+    serviceOffline: 'Offline Reading', serviceOfflineDesc: 'Download books and read offline without internet connection',
+
+    // ── Settings ──────────────────────────────────────────
+    settingsPage: 'Settings', accountSettings: 'Account Settings',
+    displaySettings: 'Display', notificationSettings: 'Notifications',
+    privacySettings: 'Privacy', changePassword: 'Change Password',
+    emailNotifications: 'Email Notifications', smsNotifications: 'SMS Notifications',
+    dataUsage: 'Data Usage', helpSupport: 'Help & Support',
+    aboutApp: 'About the App', termsConditions: 'Terms & Conditions',
+    privacyPolicy: 'Privacy Policy', contactUs: 'Contact Us',
   },
 
   rw: {
@@ -205,9 +233,9 @@ const t = {
     appName: 'Isomero ry\'a Digitale', tagline: 'Soma, Wumva & Iga mu Rurimi Rwawe',
     search: 'Shakisha ibitabo, abanditsi…', voiceSearch: 'Shakisha ukoresheje ijwi',
     login: 'Injira', register: 'Tangira', logout: 'Sohoka',
-    dashboard: 'Ikibaho', books: 'Ibitabo', upload: 'Kohereza',
+    dashboard: 'Urukuta rw\'amakuru', books: 'Ibitabo', upload: 'Kohereza',
     bookmarks: 'Ibimenyetso', history: 'Amateka', audio: 'Isomero ry\'Amajwi',
-    settings: 'Ikatura', profile: 'Umwirondoro', admin: 'Umuyobozi',
+    settings: 'Igenamiterere', profile: 'Umwirondoro', admin: 'Umuyobozi',
     welcome: 'Murakaza neza', recommended: 'Bigusweko',
     trending: 'Bikunzwe', recent: 'Byafunguwe Vuba',
     continueReading: 'Komeza', audiobooks: 'Ibitabo by\'amajwi',
@@ -331,7 +359,7 @@ const t = {
     avidReader: 'Umusomyi w\'Impamo',
     hoverToHear: 'Zunguruka kuri menu kugira ngo uwumve',
     platformLabel: 'Urubuga', languagesLabel: 'Indimi',
-    footerCopy: '� 2026 Isomero ry\'a Digitale. Yakozwe ku buryo bw\'iyinjira & gushyirwa hamwe.',
+    footerCopy: '� 2026 Isomero ry\'a Digitale. Yakozwe ku buryo bw\'iyinjira & gushyirwa hamwe.',
 
     // ── Audio Player ──────────────────────────────────────
     audioReading: '🎧 Gusoma Amajwi', wordLabel: 'Ijambo',
@@ -399,6 +427,34 @@ const t = {
     statusActive: 'Akora', statusInactive: 'Ntakora',
     yes: 'Yego', no: 'Oya',
     tabOverview: '📊 Incamake', tabUsers: '👤 Abakoresha', tabBooks: '📚 Ibitabo',
+
+    // ── About Us ──────────────────────────────────────────
+    aboutUs: 'Abo Turibo', ourMission: 'Intego Yacu',
+    missionText: 'Gushyiraho ubumenyi hejuru ya Afrika mu nzira ihuye nubwiyunge bwa ururimi, ubwiyunge bwa ijwi n\'ubwiyunge bwa gusemura, kugira ngo umuntu umwe akwiye gusoma.',
+    ourVision: 'Ishanty Yacu',
+    visionText: 'Isi aho ururimi n\'ubumenyi bwo gusoma sibigira inyigisho. Aho umuntu umwe akwiye gusoma, kumva, no kuganira mu rurimi rwawe.',
+    whyWeExist: 'Impamvu Twarikiye',
+    whyText: 'Isomero z\'inzira nziza zarenzeho mu rurali, zinezuro cyane, maze zikurikiza ururimi rumwe gusa. Natwevanije Isomero ry\'a Digitale kugira ngo tukarore izi mbibi.',
+    ourTeam: 'Itsinda Ryacu',
+    teamText: 'Itsinda ry\'abakora, abarutonde, n\'abayobozi b\'ubwiyunge bo mu Rwanda, bazakire gukorera ibibazo byo gukurura ubumenyi mu mahanga yatakabonye.',
+
+    // ── Services ──────────────────────────────────────────
+    services: 'Serivisi',
+    serviceVoiceSearch: 'Shakisha n\'Ijwi', serviceVoiceSearchDesc: 'Shakisha ibitabo igihumbi uvuge mu Cyongereza cyangwa mu Kinyarwanda',
+    serviceTranslation: 'Gusemura Vuba', serviceTranslationDesc: 'Semura inyandiko iyo ari yo yose hagati y\'indimi',
+    serviceAudioBooks: 'Ibitabo by\'Amajwi', serviceAudioBooksDesc: 'Wumva ibitabo hamwe n\'ijwi ry\'uburyo bwawe bwishimira',
+    serviceUpload: 'Kohereza Igitabo', serviceUploadDesc: 'Sangira ibitabo byawe n\'isi muburyo n\'ururimi',
+    serviceLowLit: 'Uburyo bwa Basomyi', serviceLowLitDesc: 'Ikirango cyemewe hamwe n\'inyandiko nini, ibigengerero, n\'ubuyobozi bw\'ijwi',
+    serviceOffline: 'Gusoma Kutagira Internet', serviceOfflineDesc: 'Kohereza ibitabo ubasoma kutagira injira y\'internet',
+
+    // ── Settings ──────────────────────────────────────────
+    settingsPage: 'Igenamiterere', accountSettings: 'Igenamiterere y\'Akawonto',
+    displaySettings: 'Ibikuba', notificationSettings: 'Imenyesha',
+    privacySettings: 'Ibanga', changePassword: 'Hindura Ijambo ry\'Ibanga',
+    emailNotifications: 'Imenyesha z\'Imeli', smsNotifications: 'Imenyesha z\'SMS',
+    dataUsage: 'Ikoreshwa ry\'Ibibazo', helpSupport: 'Ubufasha & Inzira',
+    aboutApp: 'Ku Bwa Porogaramu', termsConditions: 'Amasezerano n\'Ibishe',
+    privacyPolicy: 'Igenamiterere y\'Ibanga', contactUs: 'Twandikire',
   },
 };
 

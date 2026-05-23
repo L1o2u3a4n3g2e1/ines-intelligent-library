@@ -5,6 +5,7 @@ import { FiMic, FiHeadphones, FiGlobe, FiBookOpen, FiArrowRight, FiCheck, FiPhon
 import Navbar from '../components/layout/Navbar';
 import Footer from '../components/layout/Footer';
 import LanguageToggleButtons from '../components/ui/LanguageToggleButtons';
+import SpeechToTextProduction from '../components/SpeechToTextProduction';
 import { useApp } from '../context/AppContext';
 import { useTranslation } from '../utils/translations';
 import { CATEGORIES } from '../utils/constants';
@@ -40,10 +41,6 @@ export default function Landing() {
   const navigate = useNavigate();
   const [hoveredCat, setHoveredCat] = useState(null);
 
-  // STT demo state
-  const [listening, setListening] = useState(false);
-  const [voiceText, setVoiceText] = useState('');
-
   // Translation demo state
   const [demoIdx, setDemoIdx] = useState(0);
   const [showRw, setShowRw] = useState(false);
@@ -52,20 +49,6 @@ export default function Landing() {
   const [guestPhone, setGuestPhone] = useState('');
   const [guestError, setGuestError] = useState('');
   const [guestLoading, setGuestLoading] = useState(false);
-
-  const startVoice = () => {
-    if (!('webkitSpeechRecognition' in window || 'SpeechRecognition' in window)) {
-      setVoiceText('Voice search not supported in this browser.');
-      return;
-    }
-    const SR = window.SpeechRecognition || window.webkitSpeechRecognition;
-    const r = new SR();
-    r.lang = language === 'rw' ? 'rw-RW' : 'en-US';
-    r.onstart  = () => { setListening(true); setVoiceText(''); };
-    r.onresult = (e) => { setVoiceText(e.results[0][0].transcript); setListening(false); };
-    r.onerror  = r.onend = () => setListening(false);
-    r.start();
-  };
 
   const handleGuestContinue = async () => {
     const clean = guestPhone.replace(/\s/g, '');
@@ -261,49 +244,19 @@ export default function Landing() {
         <div className="relative max-w-3xl mx-auto text-center">
           <motion.div {...fadeUp}>
             <span className="inline-block px-4 py-1.5 bg-white/15 text-brand-200 text-xs font-semibold rounded-full mb-5">{t('sttBadge')}</span>
-            <h2 className="text-4xl font-['Playfair_Display'] font-bold mb-4">{t('voiceSearchTitle')}</h2>
-            <p className="text-brand-200 text-lg mb-10">{t('voiceSearchDesc')}</p>
+            <h2 className="text-4xl font-['Playfair_Display'] font-bold mb-4 text-white">{t('voiceSearchTitle')}</h2>
+            <p className="text-brand-100 text-lg mb-10">{t('voiceSearchDesc')}</p>
 
-            {/* Mic button */}
-            <div className="flex flex-col items-center gap-6">
-              <motion.button
-                onClick={listening ? undefined : startVoice}
-                whileHover={{ scale: 1.05 }} whileTap={{ scale: 0.95 }}
-                className={`w-24 h-24 rounded-full flex items-center justify-center text-white shadow-2xl transition-all ${
-                  listening ? 'bg-red-500 animate-mic cursor-default' : 'bg-brand-600 hover:bg-brand-500'
-                }`}>
-                {listening ? <FiStopCircle size={36} /> : <FiMic size={36} />}
-              </motion.button>
-
-              <p className="text-sm text-brand-300">
-                {listening ? t('listeningSpeak') : t('tapMicSpeak')}
-              </p>
-
-              <AnimatePresence>
-                {voiceText && (
-                  <motion.div initial={{ opacity: 0, y: 10 }} animate={{ opacity: 1, y: 0 }} exit={{ opacity: 0 }}
-                    className="glass rounded-2xl px-6 py-4 max-w-md w-full text-center">
-                    <p className="text-xs text-brand-300 mb-1 uppercase tracking-wide">{t('youSaid')}</p>
-                    <p className="text-white font-medium">"{voiceText}"</p>
-                    <Link to={`/search?q=${encodeURIComponent(voiceText)}`}>
-                      <button className="mt-3 text-xs bg-white/20 hover:bg-white/30 text-white px-4 py-2 rounded-xl transition-all">
-                        {t('searchForThis')} <FiArrowRight size={11} className="inline ml-1" />
-                      </button>
-                    </Link>
-                  </motion.div>
-                )}
-              </AnimatePresence>
-
-              {/* Demo examples */}
-              <div className="flex flex-wrap justify-center gap-2 mt-2">
-                {['Health book', 'Igitabo cy\'ubuhinzi', 'Atomic Habits', 'Ubuzima Bwiza'].map(ex => (
-                  <Link key={ex} to={`/search?q=${encodeURIComponent(ex)}`}>
-                    <span className="inline-flex items-center gap-1.5 text-xs text-brand-200 bg-white/10 hover:bg-white/20 px-3 py-1.5 rounded-full cursor-pointer transition-all">
-                      <FiMic size={10} /> {ex}
-                    </span>
-                  </Link>
-                ))}
-              </div>
+            {/* Live Speech Recognition */}
+            <div className="flex justify-center">
+              <SpeechToTextProduction
+                language="rw"
+                onResult={(result) => {
+                  if (result.text) {
+                    navigate(`/search?q=${encodeURIComponent(result.text)}`);
+                  }
+                }}
+              />
             </div>
           </motion.div>
         </div>

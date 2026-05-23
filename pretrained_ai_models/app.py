@@ -47,6 +47,10 @@ from transformers import (
 import logging
 import time
 from time import time as get_time
+import json
+import threading
+import shutil
+from typing import Optional
 
 # Configure logging
 logging.basicConfig(level=logging.INFO)
@@ -104,7 +108,7 @@ app.add_middleware(
     CORSMiddleware,
     allow_origins=ALLOWED_ORIGINS,
     allow_credentials=True,
-    allow_methods=["GET", "POST"],
+    allow_methods=["GET", "POST", "DELETE"],
     allow_headers=["Content-Type", "Authorization"],
     max_age=600,
 )
@@ -129,8 +133,27 @@ if metrics_collector:
 # Directory configuration
 UPLOAD_DIR = "uploads"
 OUTPUT_DIR = "outputs"
+RECORDINGS_DIR = "recordings"
 os.makedirs(UPLOAD_DIR, exist_ok=True)
 os.makedirs(OUTPUT_DIR, exist_ok=True)
+os.makedirs(RECORDINGS_DIR, exist_ok=True)
+os.makedirs("models/stt", exist_ok=True)
+
+# Training state for background job management
+training_state = {
+    "status": "idle",
+    "progress": 0,
+    "current_epoch": 0,
+    "total_epochs": 0,
+    "train_loss": None,
+    "val_accuracy": None,
+    "val_loss": None,
+    "message": "",
+    "started_at": None,
+    "completed_at": None,
+    "error": None,
+}
+training_lock = threading.Lock()
 
 # Device configuration
 device = "cuda:0" if torch.cuda.is_available() else "cpu"
@@ -229,8 +252,8 @@ except Exception as e:
 
 logger.info("Loading English TTS model...")
 try:
-    en_tts_tokenizer = AutoTokenizer.from_pretrained("microsoft/speecht5_tts")
-    en_tts_model = VitsModel.from_pretrained("microsoft/speecht5_tts").to(device)
+    en_tts_tokenizer = AutoTokenizer.from_pretrained("facebook/mms-tts-eng")
+    en_tts_model = VitsModel.from_pretrained("facebook/mms-tts-eng").to(device)
     logger.info("English TTS model loaded successfully")
 except Exception as e:
     logger.error(f"Failed to load English TTS model: {e}")
@@ -542,6 +565,192 @@ async def pipeline_all(
     except Exception as e:
         logger.error(f"Error in pipeline endpoint: {e}")
         raise HTTPException(status_code=500, detail=str(e))
+
+# ============================================================================
+# RECORDING & TRAINING ENDPOINTS (STT Model Fine-tuning)
+# ============================================================================
+
+@app.post("/recordings/save")
+@limiter.limit("30/hour")
+async def save_recording(
+    request: Request,
+    audio: UploadFile = File(...),
+    label: str = Form(...),
+    language: str = Form(...),
+    token: dict = Depends(verify_token)
+):
+    """
+    Save a labeled audio recording for LSTM STT training.
+    Language: 'rw' or 'en'
+    Label: text description of what was spoken
+    """
+    if language not in ["rw", "en"]:
+        raise HTTPException(status_code=400, detail="language must be 'rw' or 'en'")
+    if not label or not label.strip():
+        raise HTTPException(status_code=400, detail="label is required")
+
+    safe_label = label.strip().lower().replace(" ", "_")[:50]
+    recording_id = str(uuid.uuid4())
+    save_dir = os.path.join(RECORDINGS_DIR, language, safe_label)
+    os.makedirs(save_dir, exist_ok=True)
+
+    filename = f"{recording_id}.wav"
+    file_path = os.path.join(save_dir, filename)
+
+    content = await audio.read()
+    with open(file_path, "wb") as f:
+        f.write(content)
+
+    meta = {
+        "id": recording_id,
+        "label": label.strip(),
+        "safe_label": safe_label,
+        "language": language,
+        "filename": filename,
+        "path": file_path,
+        "file_size_bytes": len(content),
+        "created_at": datetime.utcnow().isoformat()
+    }
+    meta_path = os.path.join(save_dir, f"{recording_id}.json")
+    with open(meta_path, "w") as f:
+        json.dump(meta, f, indent=2)
+
+    logger.info(f"Recording saved: {file_path} label={label} lang={language}")
+    return {"success": True, **meta}
+
+@app.get("/recordings/list")
+@limiter.limit("60/minute")
+async def list_recordings(
+    request: Request,
+    language: Optional[str] = None,
+    token: dict = Depends(verify_token)
+):
+    """
+    Return all saved recordings with metadata.
+    Optional: ?language=rw or ?language=en to filter by language
+    """
+    recordings = []
+    base = Path(RECORDINGS_DIR)
+    if not base.exists():
+        return {"success": True, "recordings": [], "total": 0}
+
+    lang_dirs = [base / language] if language else [d for d in base.iterdir() if d.is_dir()]
+    for lang_dir in lang_dirs:
+        if not lang_dir.exists():
+            continue
+        for label_dir in lang_dir.iterdir():
+            if not label_dir.is_dir():
+                continue
+            for meta_file in label_dir.glob("*.json"):
+                try:
+                    with open(meta_file) as f:
+                        meta = json.load(f)
+                    meta["audio_exists"] = os.path.exists(meta.get("path", ""))
+                    recordings.append(meta)
+                except Exception:
+                    pass
+
+    recordings.sort(key=lambda r: r.get("created_at", ""), reverse=True)
+    return {"success": True, "recordings": recordings, "total": len(recordings)}
+
+@app.delete("/recordings/{recording_id}")
+@limiter.limit("30/hour")
+async def delete_recording(
+    request: Request,
+    recording_id: str,
+    token: dict = Depends(verify_token)
+):
+    """
+    Delete a recording by UUID.
+    """
+    base = Path(RECORDINGS_DIR)
+    found_meta = None
+    found_dir = None
+
+    for meta_file in base.rglob(f"{recording_id}.json"):
+        try:
+            with open(meta_file) as f:
+                found_meta = json.load(f)
+            found_dir = meta_file.parent
+            break
+        except Exception:
+            pass
+
+    if not found_meta:
+        raise HTTPException(status_code=404, detail=f"Recording {recording_id} not found")
+
+    wav_path = os.path.join(found_dir, f"{recording_id}.wav")
+    json_path = os.path.join(found_dir, f"{recording_id}.json")
+    for p in [wav_path, json_path]:
+        if os.path.exists(p):
+            os.remove(p)
+
+    logger.info(f"Recording deleted: {recording_id}")
+    return {"success": True, "id": recording_id}
+
+@app.post("/train")
+@limiter.limit("5/hour")
+async def start_training(
+    request: Request,
+    epochs: int = Form(default=50),
+    token: dict = Depends(verify_token)
+):
+    """
+    Start LSTM STT model training on saved recordings in background thread.
+    Returns 409 if training already running.
+    """
+    with training_lock:
+        if training_state["status"] == "running":
+            raise HTTPException(status_code=409, detail="Training already in progress")
+
+        training_state.update({
+            "status": "running",
+            "progress": 0,
+            "current_epoch": 0,
+            "total_epochs": epochs,
+            "train_loss": None,
+            "val_accuracy": None,
+            "val_loss": None,
+            "message": "Starting training...",
+            "started_at": datetime.utcnow().isoformat(),
+            "completed_at": None,
+            "error": None,
+        })
+
+    def run_training():
+        try:
+            from training_service import train_lstm_model
+            train_lstm_model(
+                recordings_dir=RECORDINGS_DIR,
+                model_output_dir="models/stt",
+                epochs=epochs,
+                state=training_state,
+                lock=training_lock
+            )
+            with training_lock:
+                training_state["status"] = "completed"
+                training_state["completed_at"] = datetime.utcnow().isoformat()
+                training_state["progress"] = 100
+        except Exception as e:
+            with training_lock:
+                training_state["status"] = "failed"
+                training_state["error"] = str(e)
+                training_state["message"] = f"Training failed: {e}"
+            logger.error(f"Training failed: {e}")
+
+    thread = threading.Thread(target=run_training, daemon=True)
+    thread.start()
+
+    return {"success": True, "message": "Training started", "status": "running"}
+
+@app.get("/train/status")
+@limiter.limit("120/minute")
+async def get_training_status(request: Request):
+    """
+    Return current training status. No authentication required for polling.
+    """
+    with training_lock:
+        return dict(training_state)
 
 # ============================================================================
 # MONITORING ENDPOINTS
