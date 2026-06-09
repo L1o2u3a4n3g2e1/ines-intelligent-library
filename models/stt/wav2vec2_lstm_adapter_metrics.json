@@ -3,7 +3,7 @@
   "base_model": "facebook/wav2vec2-base-960h",
   "model_type": "Wav2Vec2 pretrained acoustic encoder plus residual BiLSTM CTC adapter",
   "dataset": "LibriSpeech real held-out audio",
-  "evaluated_at": "2026-06-09 20:02:39",
+  "evaluated_at": "2026-06-09 20:46:36",
   "adapter_trained_epochs": 5,
   "train_samples": 3000,
   "dev": {
