@@ -1,0 +1,109 @@
+{
+  "model_path": "ml-speech\\models\\english_lstm_ctc_best.pt",
+  "task": "English speech-to-text using LSTM-CTC",
+  "dataset": "LibriSpeech real held-out audio",
+  "evaluated_at": "2026-06-09 10:06:02",
+  "sample_count": 240,
+  "splits": [
+    {
+      "split": "dev-clean",
+      "samples": 120,
+      "wer": 0.9066447154711469,
+      "cer": 0.4534424750830554,
+      "sentence_accuracy": 0.0,
+      "word_accuracy": 0.09335528452885311,
+      "character_accuracy": 0.5465575249169445,
+      "word_precision": 0.1588345864661654,
+      "word_recall": 0.13751017087062653,
+      "word_f1": 0.1474051460968164,
+      "examples": [
+        {
+          "reference": "MISTER QUILTER IS THE APOSTLE OF THE MIDDLE CLASSES AND WE ARE GLAD TO WELCOME HIS GOSPEL",
+          "prediction": "WHIS TECOTER RISE A PUSOF WIL CLASES CWEER BGOA TOLVEN HIS GUSBLE"
+        },
+        {
+          "reference": "NOR IS MISTER QUILTER'S MANNER LESS INTERESTING THAN HIS MATTER",
+          "prediction": "NMORASISTER COTERS MANAR LES INTRESTON EN HIS METTER"
+        },
+        {
+          "reference": "ON THE GENERAL PRINCIPLES OF ART MISTER QUILTER WRITES WITH EQUAL LUCIDITY",
+          "prediction": "O E GINO CONSAPLES OBARP METE COTERER RAC WAT E COO SETEKE"
+        },
+        {
+          "reference": "AS FOR ETCHINGS THEY ARE OF TWO KINDS BRITISH AND FOREIGN",
+          "prediction": "AS FER ECTESE THEROF TO KINC BRISH AN FAN"
+        },
+        {
+          "reference": "NEAR THE FIRE AND THE ORNAMENTS FRED BROUGHT HOME FROM INDIA ON THE MANTEL BOARD",
+          "prediction": "THERFIER AND I ORNT MENS FRAD BROT OM INI O THE MENTABORD"
+        },
+        {
+          "reference": "ONLY UNFORTUNATELY HIS OWN WORK NEVER DOES GET GOOD",
+          "prediction": "ALLA AN FORTN ELA HIS O WORK NEVER DAS CI GO"
+        },
+        {
+          "reference": "BY HARRY QUILTER M A",
+          "prediction": "I HEE COTVER AM A"
+        },
+        {
+          "reference": "THE LITTLE GIRL HAD BEEN ASLEEP BUT SHE HEARD THE RAPS AND OPENED THE DOOR",
+          "prediction": "TOLO E GRA EN E SLYP HA SHE HER DE REPS EN COPE THE GOR"
+        }
+      ]
+    },
+    {
+      "split": "test-clean",
+      "samples": 120,
+      "wer": 0.9309700524077457,
+      "cer": 0.41948829041290064,
+      "sentence_accuracy": 0.0,
+      "word_accuracy": 0.06902994759225434,
+      "character_accuracy": 0.5805117095870993,
+      "word_precision": 0.17421602787456447,
+      "word_recall": 0.16339869281045752,
+      "word_f1": 0.16863406408094436,
+      "examples": [
+        {
+          "reference": "STUFF IT INTO YOU HIS BELLY COUNSELLED HIM",
+          "prediction": "STOFE EN TO YO HIS BELY COTO HIM"
+        },
+        {
+          "reference": "HELLO BERTIE ANY GOOD IN YOUR MIND",
+          "prediction": "O BATAN E ANE GORD IN YER MID"
+        },
+        {
+          "reference": "NUMBER TEN FRESH NELLY IS WAITING ON YOU GOOD NIGHT HUSBAND",
+          "prediction": "NO BU DA FRETION NEYS WATE O YY CONA HAS END"
+        },
+        {
+          "reference": "A COLD LUCID INDIFFERENCE REIGNED IN HIS SOUL",
+          "prediction": "U CO WELO SI IN DI FRENS RANG DIND HAS SO"
+        },
+        {
+          "reference": "WELL NOW ENNIS I DECLARE YOU HAVE A HEAD AND SO HAS MY STICK",
+          "prediction": "WE O ENASID DE CLAR YOU HAVE HAD DA AN SO HAS MY STPEC"
+        },
+        {
+          "reference": "HE TRIED TO THINK HOW IT COULD BE",
+          "prediction": "THE TA TO FAN CO IT CO BE"
+        },
+        {
+          "reference": "BUT THE DUSK DEEPENING IN THE SCHOOLROOM COVERED OVER HIS THOUGHTS THE BELL RANG",
+          "prediction": "BAT THE DUSK DEPENING IN TES OROM COVER GOVER HIS TOTS THE BERAN"
+        },
+        {
+          "reference": "THEN YOU CAN ASK HIM QUESTIONS ON THE CATECHISM DEDALUS",
+          "prediction": "THENCON ASEM QLASTEN ON THE CA CIS AMTEVES"
+        }
+      ]
+    }
+  ],
+  "overall_word_accuracy": 0.08119261606055372,
+  "overall_word_accuracy_percent": 8.119261606055373,
+  "overall_sentence_accuracy": 0.0,
+  "overall_cer": 0.436465382747978,
+  "overall_wer": 0.9188073839394463,
+  "target_word_accuracy_percent": 75.0,
+  "target_met": false,
+  "verdict": "needs_more_training"
+}

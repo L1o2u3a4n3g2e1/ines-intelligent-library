@@ -1,9 +1,0 @@
-{
-  "model": "Production LSTM (Synthetic Audio)",
-  "epochs_trained": 15,
-  "best_val_accuracy": 0.0,
-  "test_accuracy": 0.0,
-  "num_classes": 16,
-  "num_training_samples": 256,
-  "num_commands": 16
-}

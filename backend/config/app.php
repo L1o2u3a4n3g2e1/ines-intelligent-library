@@ -16,5 +16,4 @@ return [
     ],
     'upload_dir' => __DIR__ . '/../uploads',
     'stt_service_url' => 'http://localhost:5001/transcribe',
-    'tts_service_url' => 'http://localhost:5002/synthesize',
 ];

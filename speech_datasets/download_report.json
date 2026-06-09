@@ -1,0 +1,21 @@
+{
+  "created_at": "2026-06-06 04:08:15",
+  "purpose": "English open-vocabulary LSTM-CTC STT training data",
+  "model_requirement": "RNN/LSTM, not Whisper/Transformer",
+  "results": [
+    {
+      "split": "test-clean",
+      "status": "already_prepared",
+      "audio_files": 2620,
+      "transcript_files": 87
+    },
+    {
+      "split": "train-clean-100",
+      "status": "prepared",
+      "audio_files": 28539,
+      "transcript_files": 585
+    }
+  ],
+  "training_command": "python scripts/train_english_lstm_ctc_real.py --epochs 100 --batch-size 8 --eval-samples 100 --target-accuracy 0.75 --resume",
+  "evaluation_command": "python scripts/evaluate_english_lstm_stt_real.py --model ml-speech/models/english_lstm_ctc_best.pt --samples 200"
+}

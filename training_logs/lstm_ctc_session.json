@@ -1,0 +1,13 @@
+{
+  "process_id": 3628,
+  "started_at": "2026-06-09 07:05:34",
+  "resumed_checkpoint_epoch": 16,
+  "start_epoch": 17,
+  "target_epoch": 50,
+  "max_runtime_minutes": 1440.0,
+  "training_samples": 2772,
+  "development_samples": 1382,
+  "test_samples": 1399,
+  "num_threads": 2,
+  "device": "cpu"
+}

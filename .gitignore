@@ -16,11 +16,12 @@ __pycache__/
 *.pyd
 .Python
 
-# Large data & model files
-digital_library/data/
-digital_library/models/
-digital_library/books/*.pdf
-digital_library/Antigravity/
+# Large data and model files
+speech_datasets/LibriSpeech/
+speech_datasets/processed/
+ml-speech/datasets/
+ml-speech/models/*.pt
+models/**/*.pt
 
 # Logs
 *.log
@@ -44,9 +45,9 @@ yarn-error.log
 *~
 
 # Upload directories
-uploads/
-digital_library/uploads/
+backend/uploads/
 temp/
+backups/
 
 # OS
 Thumbs.db
@@ -65,9 +66,7 @@ coverage/
 .phpunit.result.cache
 
 # Build output
-digital_library/frontend/build/
-digital_library/mobile/.expo/
-digital_library/mobile/dist/
+dist/
 
 # Installers (downloaded files)
 *.exe

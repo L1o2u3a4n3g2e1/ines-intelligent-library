@@ -1,0 +1,199 @@
+{
+  "run_id": "1780998946195-827172",
+  "executed_at": "2026-06-09T09:55:56.658Z",
+  "api": "http://localhost/digital-library/backend",
+  "passed": 38,
+  "failed": 0,
+  "results": [
+    {
+      "name": "Backend health and MySQL connection",
+      "status": "PASS",
+      "detail": "backend ok, database connected, uploads writable"
+    },
+    {
+      "name": "Real student registration",
+      "status": "PASS",
+      "detail": "created user 47"
+    },
+    {
+      "name": "Student login",
+      "status": "PASS",
+      "detail": ""
+    },
+    {
+      "name": "Librarian login",
+      "status": "PASS",
+      "detail": ""
+    },
+    {
+      "name": "Administrator creates a real lecturer account",
+      "status": "PASS",
+      "detail": "created lecturer 48"
+    },
+    {
+      "name": "Lecturer login",
+      "status": "PASS",
+      "detail": ""
+    },
+    {
+      "name": "Authentication identity for all three roles",
+      "status": "PASS",
+      "detail": "STUDENT,LECTURER,LIBRARIAN_ADMIN"
+    },
+    {
+      "name": "Student is denied user administration",
+      "status": "PASS",
+      "detail": "HTTP 403"
+    },
+    {
+      "name": "Lecturer is denied librarian analytics",
+      "status": "PASS",
+      "detail": "HTTP 403"
+    },
+    {
+      "name": "Student is denied catalog book creation",
+      "status": "PASS",
+      "detail": "HTTP 403"
+    },
+    {
+      "name": "Academic public lists use live database rows",
+      "status": "PASS",
+      "detail": "6 faculties, 31 departments, 2 courses"
+    },
+    {
+      "name": "Librarian creates faculty, department, and course",
+      "status": "PASS",
+      "detail": "faculty 23, department 48, course 18"
+    },
+    {
+      "name": "Librarian assigns lecturer to course",
+      "status": "PASS",
+      "detail": "assignment active"
+    },
+    {
+      "name": "Lecturer creates a course-linked catalog book",
+      "status": "PASS",
+      "detail": "book 22"
+    },
+    {
+      "name": "Lecturer uploads Word book and backend converts it to PDF",
+      "status": "PASS",
+      "detail": "file 14, ines-live-audit.pdf"
+    },
+    {
+      "name": "Converted PDF content is extractable",
+      "status": "PASS",
+      "detail": "211 extracted characters"
+    },
+    {
+      "name": "Protected catalog file download works",
+      "status": "PASS",
+      "detail": "1853 PDF bytes"
+    },
+    {
+      "name": "General catalog and faculty/department recommendation filters",
+      "status": "PASS",
+      "detail": "4 total; linked book found in all academic filters"
+    },
+    {
+      "name": "Header/catalog search query logs real results",
+      "status": "PASS",
+      "detail": "1 matching result(s)"
+    },
+    {
+      "name": "Student private Word upload converts to PDF",
+      "status": "PASS",
+      "detail": "private book 11"
+    },
+    {
+      "name": "Private book read, download, and owner isolation",
+      "status": "PASS",
+      "detail": "content readable, PDF downloadable, other user denied"
+    },
+    {
+      "name": "Student submits a book for librarian verification",
+      "status": "PASS",
+      "detail": "pending submission 11"
+    },
+    {
+      "name": "Librarian sees and rejects pending student submission",
+      "status": "PASS",
+      "detail": "librarian decision persisted"
+    },
+    {
+      "name": "Borrow request, approval, renewal, and return update inventory",
+      "status": "PASS",
+      "detail": "request returned; inventory restored to 2"
+    },
+    {
+      "name": "Borrowing is restricted to the student role",
+      "status": "PASS",
+      "detail": "lecturer denied with HTTP 403"
+    },
+    {
+      "name": "Reading progress save, fetch, list, and reset",
+      "status": "PASS",
+      "detail": "60% persisted, then reset to 0%"
+    },
+    {
+      "name": "Favorite toggle and listing",
+      "status": "PASS",
+      "detail": "add, list, remove"
+    },
+    {
+      "name": "Bookmark add, list, and remove",
+      "status": "PASS",
+      "detail": "bookmark 10 removed"
+    },
+    {
+      "name": "Rating, review, librarian moderation, and public review list",
+      "status": "PASS",
+      "detail": "approved review visible; average rating 5"
+    },
+    {
+      "name": "Lecturer reading list add/get/remove book",
+      "status": "PASS",
+      "detail": "published list 12"
+    },
+    {
+      "name": "Lecture-note upload, librarian moderation, and download",
+      "status": "PASS",
+      "detail": "approved note 10"
+    },
+    {
+      "name": "Lecturer recommendation creates a student notification",
+      "status": "PASS",
+      "detail": "recommendation 11; notification read/deleted"
+    },
+    {
+      "name": "Manual microphone transcript reaches voice search and logging",
+      "status": "PASS",
+      "detail": "1 result(s), log persisted"
+    },
+    {
+      "name": "Open-vocabulary STT transcribes held-out LibriSpeech through PHP search",
+      "status": "PASS",
+      "detail": "\"Hello, Bertie, any good in your mind?\" via whisper-tiny.en"
+    },
+    {
+      "name": "gTTS generates and serves real English MP3 audio",
+      "status": "PASS",
+      "detail": "36864 MP3 bytes; log persisted"
+    },
+    {
+      "name": "Librarian analytics, top lists, reports, logs, settings, and AI status",
+      "status": "PASS",
+      "detail": "14 management endpoints returned live data"
+    },
+    {
+      "name": "Private-book delete removes the record and stored file",
+      "status": "PASS",
+      "detail": "record and file removed"
+    },
+    {
+      "name": "Forgot and reset password invalidates the old password",
+      "status": "PASS",
+      "detail": "old password rejected; replacement password accepted"
+    }
+  ]
+}
