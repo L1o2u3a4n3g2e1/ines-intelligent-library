@@ -16,12 +16,17 @@
   "keywords": [
     "digital-library",
     "books",
+<<<<<<< HEAD
     "speech-to-text",
     "text-to-speech"
+=======
+    "voice-recognition"
+>>>>>>> d4548d1cc7514de6ee3b8315ff3998437749da5a
   ],
   "author": "",
   "license": "ISC",
   "dependencies": {
+<<<<<<< HEAD
     "lucide-react": "^0.468.0",
     "mysql2": "^3.22.3",
     "react": "^18.3.1",
@@ -31,5 +36,17 @@
   "devDependencies": {
     "@vitejs/plugin-react": "^4.7.0",
     "vite": "^5.4.21"
+=======
+    "bcryptjs": "^3.0.3",
+    "cookie-parser": "^1.4.7",
+    "cors": "^2.8.5",
+    "dotenv": "^16.0.3",
+    "express": "^4.18.2",
+    "jsonwebtoken": "^9.0.2",
+    "multer": "^1.4.5-lts.1",
+    "mysql2": "^3.15.3",
+    "nodemailer": "^7.0.10",
+    "pg": "^8.21.0"
+>>>>>>> d4548d1cc7514de6ee3b8315ff3998437749da5a
   }
 }

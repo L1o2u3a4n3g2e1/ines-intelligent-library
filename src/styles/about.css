@@ -1,0 +1,261 @@
+/* About Page Styles */
+
+.about-container {
+  width: 100%;
+  min-height: 100vh;
+}
+
+/* Hero Section */
+.about-hero {
+  background: linear-gradient(135deg, var(--soft-brown) 0%, var(--dark-brown) 100%);
+  color: var(--white);
+  padding: 6rem 1rem;
+  text-align: center;
+}
+
+.about-hero-content {
+  max-width: 800px;
+  margin: 0 auto;
+}
+
+.about-hero h1 {
+  color: var(--white);
+  margin-bottom: 1rem;
+  font-size: 3.5rem;
+}
+
+.about-subtitle {
+  color: var(--primary-beige);
+  font-size: 1.5rem;
+  margin-bottom: 1.5rem;
+}
+
+.about-description {
+  color: rgba(255, 255, 255, 0.9);
+  font-size: 1.125rem;
+  line-height: 1.8;
+}
+
+/* Section Styles */
+.about-section {
+  padding: 4rem 1rem;
+  background: var(--primary-beige);
+}
+
+.section-title {
+  text-align: center;
+  color: var(--dark-brown);
+  margin-bottom: 3rem;
+  font-size: 2.5rem;
+}
+
+/* Mission Vision */
+.mission-vision-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(350px, 1fr));
+  gap: 2rem;
+  margin-bottom: 3rem;
+}
+
+.mission-card,
+.vision-card {
+  background: var(--white);
+  padding: 2rem;
+  border-left: 5px solid var(--soft-brown);
+}
+
+.mission-card h2,
+.vision-card h2 {
+  color: var(--dark-brown);
+  margin-bottom: 1rem;
+  font-size: 1.75rem;
+}
+
+.mission-card p,
+.vision-card p {
+  color: var(--text-secondary);
+  font-size: 1.05rem;
+  line-height: 1.8;
+}
+
+/* Values Grid */
+.values-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(280px, 1fr));
+  gap: 2rem;
+  margin-bottom: 2rem;
+}
+
+.value-card {
+  background: var(--white);
+  text-align: center;
+  padding: 2rem;
+  border-radius: var(--radius-xl);
+  transition: all var(--transition-base);
+}
+
+.value-card:hover {
+  transform: translateY(-8px);
+  box-shadow: var(--shadow-xl);
+  border-top: 4px solid var(--soft-brown);
+}
+
+.value-icon {
+  font-size: 3rem;
+  margin-bottom: 1rem;
+}
+
+.value-card h3 {
+  color: var(--dark-brown);
+  margin-bottom: 0.5rem;
+  font-size: 1.25rem;
+}
+
+.value-card p {
+  color: var(--text-secondary);
+  font-size: 0.95rem;
+  line-height: 1.6;
+}
+
+/* Stats Section */
+.about-stats {
+  background: linear-gradient(135deg, var(--dark-brown) 0%, var(--soft-brown) 100%);
+  padding: 4rem 1rem;
+  color: var(--white);
+}
+
+.about-stats .section-title {
+  color: var(--white);
+  margin-bottom: 3rem;
+}
+
+.stats-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
+  gap: 2rem;
+}
+
+.stat-card {
+  background: rgba(255, 255, 255, 0.1);
+  padding: 2rem;
+  border-radius: var(--radius-lg);
+  text-align: center;
+  backdrop-filter: blur(10px);
+  border: 1px solid rgba(255, 255, 255, 0.2);
+  transition: all var(--transition-base);
+}
+
+.stat-card:hover {
+  background: rgba(255, 255, 255, 0.15);
+  transform: scale(1.05);
+}
+
+.stat-number {
+  font-size: 2.5rem;
+  font-weight: 700;
+  color: var(--accent-gold);
+  margin-bottom: 0.5rem;
+}
+
+.stat-label {
+  font-size: 1.1rem;
+  font-weight: 600;
+  color: var(--white);
+}
+
+/* Journey Section */
+.journey-content {
+  background: var(--white);
+  padding: 3rem;
+  max-width: 700px;
+  margin: 0 auto;
+}
+
+.journey-content h2 {
+  color: var(--dark-brown);
+  margin-bottom: 1.5rem;
+  font-size: 2rem;
+}
+
+.journey-content p {
+  color: var(--text-secondary);
+  font-size: 1.1rem;
+  line-height: 1.8;
+}
+
+/* CTA Section */
+.about-cta {
+  background: var(--primary-beige);
+  padding: 4rem 1rem;
+  text-align: center;
+}
+
+.about-cta .btn {
+  margin-top: 1rem;
+}
+
+/* Responsive */
+@media (max-width: 768px) {
+  .about-hero h1 {
+    font-size: 2.5rem;
+  }
+
+  .about-subtitle {
+    font-size: 1.25rem;
+  }
+
+  .section-title {
+    font-size: 2rem;
+  }
+
+  .mission-vision-grid {
+    grid-template-columns: 1fr;
+  }
+
+  .values-grid {
+    grid-template-columns: 1fr;
+  }
+
+  .stats-grid {
+    grid-template-columns: repeat(2, 1fr);
+  }
+
+  .about-section,
+  .about-stats {
+    padding: 3rem 1rem;
+  }
+}
+
+@media (max-width: 480px) {
+  .about-hero {
+    padding: 3rem 1rem;
+  }
+
+  .about-hero h1 {
+    font-size: 2rem;
+  }
+
+  .about-subtitle {
+    font-size: 1.1rem;
+  }
+
+  .section-title {
+    font-size: 1.5rem;
+  }
+
+  .value-card,
+  .mission-card,
+  .vision-card,
+  .journey-content {
+    padding: 1.5rem;
+  }
+
+  .stat-number {
+    font-size: 2rem;
+  }
+
+  .stats-grid {
+    grid-template-columns: repeat(2, 1fr);
+    gap: 1rem;
+  }
+}
