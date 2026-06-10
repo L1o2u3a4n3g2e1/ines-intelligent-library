@@ -34,7 +34,7 @@ export default function StudentDashboard() {
       <PageHeader eyebrow="Student workspace" title="Dashboard" description="Continue reading, track requests, and discover course resources." />
       <DashboardBrand title="Welcome to INES Digital Library" description="Your academic and private reading workspace." />
       <Card title="Speech-to-text in this dashboard" eyebrow="Transformer primary">
-        <p>Your microphone searches use the Transformer English STT service first, then fall back to the safe open-vocabulary services if needed.</p>
+        <p>Your microphone searches use the Wav2Vec2 Transformer English STT service first, then fall back to Whisper if the Transformer cannot decode the recording.</p>
         <AIModelStatus />
       </Card>
       <div className="stat-grid">

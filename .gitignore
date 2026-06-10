@@ -20,8 +20,14 @@ __pycache__/
 speech_datasets/LibriSpeech/
 speech_datasets/processed/
 ml-speech/datasets/
+ml-speech/models/checkpoints/
 ml-speech/models/*.pt
 models/**/*.pt
+transformer_model/
+transformer_librispeech_model/
+lstm_librispeech_model/
+voice_data/
+training_logs/
 
 # Logs
 *.log
@@ -46,7 +52,11 @@ yarn-error.log
 
 # Upload directories
 backend/uploads/
+book_imports/books/
+book_imports/cache/
+book_imports/logs/
 temp/
+tmp/
 backups/
 
 # OS

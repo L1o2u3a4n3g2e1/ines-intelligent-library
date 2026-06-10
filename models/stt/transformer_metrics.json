@@ -1,0 +1,36 @@
+{
+  "model_path": "facebook/wav2vec2-base-960h",
+  "base_model": "facebook/wav2vec2-base-960h",
+  "model_type": "pretrained Wav2Vec2 Transformer encoder with CTC head",
+  "dataset": "LibriSpeech real held-out audio",
+  "evaluated_at": "2026-06-09",
+  "epochs_completed": 0,
+  "local_fine_tuning_epochs": 0,
+  "samples": 40,
+  "overall_word_accuracy_percent": 95.16300366300366,
+  "overall_sentence_exact_accuracy_percent": 75.0,
+  "overall_wer_percent": 4.836996336996338,
+  "production_ready": true,
+  "warning": "This is a held-out baseline audit for the connected pretrained Transformer service, not a locally fine-tuned checkpoint.",
+  "splits": [
+    {
+      "split": "dev-clean",
+      "samples": 20,
+      "wer": 0.05185897435897435,
+      "word_accuracy_percent": 94.81410256410257,
+      "cer": 0.016011396011396013,
+      "sentence_exact_accuracy_percent": 80.0,
+      "elapsed_seconds": 94.54
+    },
+    {
+      "split": "test-clean",
+      "samples": 20,
+      "wer": 0.044880952380952376,
+      "word_accuracy_percent": 95.51190476190476,
+      "cer": 0.015327858416093711,
+      "sentence_exact_accuracy_percent": 70.0,
+      "elapsed_seconds": 74.29
+    }
+  ],
+  "retired_metric_note": "The previous 96.29% word accuracy / 69.17% exact sentence accuracy belonged to the removed Wav2Vec2 + BiLSTM adapter and is not the active production Transformer metric."
+}

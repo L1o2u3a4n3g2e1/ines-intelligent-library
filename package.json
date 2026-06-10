@@ -9,8 +9,6 @@
     "build": "vite build",
     "preview": "vite preview --host 127.0.0.1 --port 4173",
     "start:ai": "powershell -ExecutionPolicy Bypass -File scripts/start_ai_services.ps1",
-    "train:stt:four-day": "powershell -ExecutionPolicy Bypass -File scripts/start_wav2vec2_lstm_four_day.ps1",
-    "train:stt:status": "powershell -ExecutionPolicy Bypass -File scripts/check_wav2vec2_lstm_training.ps1",
     "test:live": "node scripts/live_system_acceptance.mjs"
   },
   "keywords": [

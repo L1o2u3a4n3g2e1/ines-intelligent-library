@@ -4,9 +4,9 @@ This internal FastAPI service formalizes Python's backend role.
 
 ## Responsibilities
 
-- route open-vocabulary audio to Whisper on port 5001;
-- test the open-vocabulary LSTM candidates before using Whisper as fallback;
-- expose model and LSTM-training status to the PHP backend;
+- route open-vocabulary audio to the Wav2Vec2 Transformer CTC service on port 5006;
+- use Whisper `tiny.en` on port 5001 as the final fallback;
+- expose AI model health to the PHP backend;
 - keep ML services isolated from the public React client.
 
 ## Boundary

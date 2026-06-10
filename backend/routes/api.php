@@ -74,9 +74,6 @@ function ai_model_status(): array
     $transformerMetricsPath = __DIR__ . '/../../models/stt/transformer_metrics.json';
     $transformerMetrics = is_file($transformerMetricsPath) ? json_decode(file_get_contents($transformerMetricsPath), true) : null;
 
-    $adapterMetricsPath = __DIR__ . '/../../models/stt/wav2vec2_lstm_adapter_metrics.json';
-    $adapterMetrics = is_file($adapterMetricsPath) ? json_decode(file_get_contents($adapterMetricsPath), true) : null;
-
     return [
         [
             'name' => 'Transformer English Speech-to-Text (PRIMARY)',
@@ -86,30 +83,13 @@ function ai_model_status(): array
             'accuracy_note' => $transformerMetrics
                 ? 'Held-out word accuracy: ' . round((float)$transformerMetrics['overall_word_accuracy_percent'], 2) .
                     '%; sentence exact accuracy: ' . round((float)$transformerMetrics['overall_sentence_exact_accuracy_percent'], 2) . '%.'
-                : 'Transformer model training in progress with Wav2Vec2 base. Target: 90%+ accuracy.',
+                : 'Running Wav2Vec2 Transformer CTC with pretrained facebook/wav2vec2-base-960h weights. No local fine-tuned Transformer metrics file is present yet.',
             'verified_metrics' => [
-                'dataset' => $transformerMetrics['dataset'] ?? 'LibriSpeech synthetic audio',
+                'dataset' => $transformerMetrics['dataset'] ?? 'LibriSpeech real audio smoke tests',
                 'epochs' => $transformerMetrics['epochs_completed'] ?? 0,
                 'word_accuracy_percent' => $transformerMetrics['overall_word_accuracy_percent'] ?? null,
                 'sentence_exact_accuracy_percent' => $transformerMetrics['overall_sentence_exact_accuracy_percent'] ?? null,
                 'production_ready' => (bool)($transformerMetrics['production_ready'] ?? false),
-            ],
-        ],
-        [
-            'name' => 'Custom English Wav2Vec2 + BiLSTM STT (FALLBACK)',
-            'task' => 'speech_to_text_search_fallback',
-            'source' => $adapterMetrics['model_path'] ?? 'Training in progress',
-            'status' => ($adapterMetrics['production_ready'] ?? false) ? 'ready' : 'training',
-            'accuracy_note' => $adapterMetrics
-                ? 'Held-out word accuracy: ' . round((float)$adapterMetrics['overall_word_accuracy_percent'], 2) .
-                    '%; sentence exact accuracy: ' . round((float)$adapterMetrics['overall_sentence_exact_accuracy_percent'], 2) . '%.'
-                : 'Wav2Vec2 adapter fallback. Used if primary model unavailable.',
-            'verified_metrics' => [
-                'dataset' => $adapterMetrics['dataset'] ?? 'LibriSpeech real audio',
-                'adapter_epochs' => $adapterMetrics['adapter_trained_epochs'] ?? 0,
-                'word_accuracy_percent' => $adapterMetrics['overall_word_accuracy_percent'] ?? null,
-                'sentence_exact_accuracy_percent' => $adapterMetrics['overall_sentence_exact_accuracy_percent'] ?? null,
-                'production_ready' => (bool)($adapterMetrics['production_ready'] ?? false),
             ],
         ],
         [
@@ -141,13 +121,7 @@ function local_open_vocabulary_transcribe(array $file): ?array
         return $transformerResult;
     }
 
-    // Try Wav2Vec2 + LSTM adapter (FALLBACK) - port 5003
-    $adapterResult = service_upload_audio('http://127.0.0.1:5003/api/stt/transcribe?mode=open', $file, 100);
-    if ($adapterResult) {
-        return $adapterResult;
-    }
-
-    // Try Whisper (FINAL FALLBACK) - port 5001
+    // Try Whisper fallback (port 5001)
     return service_upload_audio('http://127.0.0.1:5001/transcribe', $file, 90);
 }
 

@@ -26,20 +26,6 @@ $services = @(
         Script = 'scripts\transformer_speech_service.py'
         Output = 'transformer-stt.out.log'
         Error = 'transformer-stt.err.log'
-    },
-    @{
-        Name = 'Open-vocabulary LSTM-CTC'
-        Port = 5004
-        Script = 'scripts\english_lstm_ctc_service.py'
-        Output = 'lstm-ctc-service.out.log'
-        Error = 'lstm-ctc-service.err.log'
-    },
-    @{
-        Name = 'Wav2Vec2-LSTM adapter'
-        Port = 5005
-        Script = 'scripts\wav2vec2_lstm_adapter_service.py'
-        Output = 'wav2vec2-lstm-service.out.log'
-        Error = 'wav2vec2-lstm-service.err.log'
     }
 )
 
