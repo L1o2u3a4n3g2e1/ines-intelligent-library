@@ -74,7 +74,6 @@ function ensure_generated_book_cover(PDO $db, int $bookId, bool $force = false):
 
     $category = htmlspecialchars((string)$book['category'], ENT_QUOTES, 'UTF-8');
     $author = htmlspecialchars((string)$book['author'], ENT_QUOTES, 'UTF-8');
-    $faculty = htmlspecialchars((string)$book['faculty'], ENT_QUOTES, 'UTF-8');
     $initials = strtoupper(substr(preg_replace('/[^A-Za-z0-9]/', '', (string)$book['title']) ?: 'IN', 0, 2));
 
     $svg = <<<SVG
@@ -101,7 +100,7 @@ function ensure_generated_book_cover(PDO $db, int $bookId, bool $force = false):
   <text x="40" y="560" class="meta">{$author}</text>
   <rect x="40" y="628" width="560" height="112" rx="24" fill="rgba(255,255,255,.13)" stroke="rgba(255,255,255,.24)"/>
   <text x="70" y="675" class="meta">{$category}</text>
-  <text x="70" y="712" class="meta">{$faculty}</text>
+  <text x="70" y="712" class="meta">Academic reading resource</text>
   <text x="40" y="820" class="eyebrow">SCIENTIA ET LUX</text>
 </svg>
 SVG;

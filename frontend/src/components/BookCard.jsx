@@ -18,7 +18,6 @@ export default function BookCard({ book, role, onBorrow, onFavorite, onBookmark 
           <p>{book.author}</p>
         </div>
         <div className="book-meta">
-          <span>{book.faculty}</span>
           <span>{book.availableCopies} available</span>
           <span><Star size={14} /> {book.rating}</span>
         </div>
