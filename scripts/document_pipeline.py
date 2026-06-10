@@ -68,6 +68,33 @@ def extract_text(path: Path) -> str:
     raise ValueError(f"Text extraction is not supported for {extension or 'this file type'}")
 
 
+def extract_page_text(path: Path, page_number: int) -> dict[str, object]:
+    extension = path.suffix.lower()
+    if page_number < 1:
+        raise ValueError("Page number must be 1 or higher")
+
+    if extension == ".pdf":
+        from PyPDF2 import PdfReader
+
+        reader = PdfReader(str(path))
+        total_pages = len(reader.pages)
+        if total_pages < 1:
+            raise ValueError("The PDF does not contain pages")
+        page_number = min(page_number, total_pages)
+        text = (reader.pages[page_number - 1].extract_text() or "").strip()
+        return {"text": text, "page": page_number, "total_pages": total_pages}
+
+    if extension in {".txt", ".docx"}:
+        text = extract_text(path)
+        chunk_size = 2500
+        pages = [text[index : index + chunk_size] for index in range(0, len(text), chunk_size)] or [""]
+        total_pages = len(pages)
+        page_number = min(page_number, total_pages)
+        return {"text": pages[page_number - 1].strip(), "page": page_number, "total_pages": total_pages}
+
+    raise ValueError(f"Page extraction is not supported for {extension or 'this file type'}")
+
+
 def convert_docx_to_pdf(source: Path, target: Path) -> None:
     from reportlab.lib.enums import TA_CENTER
     from reportlab.lib.pagesizes import A4
@@ -141,6 +168,11 @@ def main() -> int:
     extract_parser.add_argument("source")
     extract_parser.add_argument("--max-chars", type=int, default=500000)
 
+    page_parser = subparsers.add_parser("extract-page")
+    page_parser.add_argument("source")
+    page_parser.add_argument("--page", type=int, default=1)
+    page_parser.add_argument("--max-chars", type=int, default=3000)
+
     args = parser.parse_args()
     source = Path(args.source).resolve()
     if not source.is_file():
@@ -152,7 +184,7 @@ def main() -> int:
             raise ValueError("The fallback converter supports DOCX files only")
         convert_docx_to_pdf(source, target)
         result = {"success": True, "pdf_path": str(target), "size": target.stat().st_size}
-    else:
+    elif args.command == "extract":
         text = extract_text(source)
         normalized = "\n".join(line.rstrip() for line in text.splitlines()).strip()
         result = {
@@ -160,6 +192,17 @@ def main() -> int:
             "text": normalized[: args.max_chars],
             "characters": len(normalized),
             "truncated": len(normalized) > args.max_chars,
+        }
+    else:
+        page = extract_page_text(source, args.page)
+        normalized = "\n".join(line.rstrip() for line in str(page["text"]).splitlines()).strip()
+        result = {
+            "success": True,
+            "text": normalized[: args.max_chars],
+            "characters": len(normalized),
+            "truncated": len(normalized) > args.max_chars,
+            "page": page["page"],
+            "total_pages": page["total_pages"],
         }
 
     print(json.dumps(result, ensure_ascii=False))

@@ -333,6 +333,59 @@ function extract_document_text(string $path, int $maxChars = 500000): ?array
     ];
 }
 
+function extract_document_page_text(string $path, int $page = 1, int $maxChars = 3000): ?array
+{
+    $extension = strtolower(pathinfo($path, PATHINFO_EXTENSION));
+    if (!in_array($extension, ['pdf', 'docx', 'txt'], true)) {
+        return null;
+    }
+
+    $page = max(1, $page);
+    $sidecar = $path . '.page-' . $page . '.txt';
+    $metaSidecar = $path . '.page-' . $page . '.json';
+    if (is_file($sidecar) && is_file($metaSidecar)) {
+        $text = trim((string)file_get_contents($sidecar));
+        $meta = json_decode((string)file_get_contents($metaSidecar), true) ?: [];
+        return [
+            'text' => mb_substr($text, 0, $maxChars),
+            'characters' => mb_strlen($text),
+            'truncated' => mb_strlen($text) > $maxChars,
+            'page' => (int)($meta['page'] ?? $page),
+            'total_pages' => (int)($meta['total_pages'] ?? $page),
+            'cached' => true,
+        ];
+    }
+
+    $pythonScript = realpath(__DIR__ . '/../../scripts/document_pipeline.py');
+    if (!$pythonScript) {
+        return null;
+    }
+    $command = 'python ' . escapeshellarg($pythonScript) . ' extract-page ' .
+        escapeshellarg($path) . ' --page ' . $page . ' --max-chars ' . $maxChars;
+    $result = run_json_command($command);
+    if (!($result['success'] ?? false)) {
+        return null;
+    }
+
+    $text = trim((string)($result['text'] ?? ''));
+    $actualPage = (int)($result['page'] ?? $page);
+    $totalPages = max(1, (int)($result['total_pages'] ?? $actualPage));
+    @file_put_contents($sidecar, $text);
+    @file_put_contents($metaSidecar, json_encode([
+        'page' => $actualPage,
+        'total_pages' => $totalPages,
+    ]));
+
+    return [
+        'text' => $text,
+        'characters' => (int)($result['characters'] ?? mb_strlen($text)),
+        'truncated' => (bool)($result['truncated'] ?? false),
+        'page' => $actualPage,
+        'total_pages' => $totalPages,
+        'cached' => false,
+    ];
+}
+
 function generate_gtts_audio(array $user, string $text, string $language = 'en'): array
 {
     $text = trim($text);
@@ -1452,6 +1505,23 @@ function route(string $method, string $path): void
         ]);
     }
 
+    if (preg_match('#^/book-files/(\d+)/page$#', $path, $m) && $method === 'GET') {
+        current_user();
+        $file = stored_book_file(Validator::int($m[1]));
+        $page = Validator::int($_GET['page'] ?? 1, 'page');
+        $content = extract_document_page_text($file['absolute_path'], $page);
+        if (!$content) {
+            Response::error('This page could not be inspected', 422);
+        }
+        Response::ok([
+            'file_id' => (int)$file['id'],
+            'book_id' => (int)$file['book_id'],
+            'file_type' => $file['file_type'],
+            'original_name' => $file['original_name'],
+            ...$content,
+        ]);
+    }
+
     if (preg_match('#^/books/(\d+)/content$#', $path, $m) && $method === 'GET') {
         current_user();
         $bookId = Validator::int($m[1]);
@@ -1469,6 +1539,34 @@ function route(string $method, string $path): void
         $content = extract_document_text($file['absolute_path']);
         if (!$content || trim($content['text'] ?? '') === '') {
             Response::error('No readable text could be extracted from this book', 422);
+        }
+        Response::ok([
+            'file_id' => $fileId,
+            'book_id' => $bookId,
+            'file_type' => $file['file_type'],
+            'original_name' => $file['original_name'],
+            ...$content,
+        ]);
+    }
+
+    if (preg_match('#^/books/(\d+)/page$#', $path, $m) && $method === 'GET') {
+        current_user();
+        $bookId = Validator::int($m[1]);
+        $page = Validator::int($_GET['page'] ?? 1, 'page');
+        $stmt = pdo()->prepare(
+            'SELECT id FROM book_files
+             WHERE book_id=:book_id AND status="active" AND file_type IN ("pdf","docx","txt","document")
+             ORDER BY FIELD(file_type, "pdf", "txt", "docx", "document"), created_at DESC LIMIT 1'
+        );
+        $stmt->execute([':book_id' => $bookId]);
+        $fileId = (int)($stmt->fetchColumn() ?: 0);
+        if (!$fileId) {
+            Response::error('This book has no readable document file', 404);
+        }
+        $file = stored_book_file($fileId);
+        $content = extract_document_page_text($file['absolute_path'], $page);
+        if (!$content) {
+            Response::error('This page could not be inspected', 422);
         }
         Response::ok([
             'file_id' => $fileId,

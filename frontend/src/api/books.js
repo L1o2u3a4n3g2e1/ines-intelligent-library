@@ -37,6 +37,10 @@ export function getBookContent(bookId) {
   return apiRequest(`/books/${bookId}/content`);
 }
 
+export function getBookPage(bookId, page = 1) {
+  return apiRequest(`/books/${bookId}/page${asQuery({ page })}`);
+}
+
 export function fileDownloadUrl(fileId) {
   const token = localStorage.getItem('ines_token') || '';
   const query = token ? `?token=${encodeURIComponent(token)}` : '';
