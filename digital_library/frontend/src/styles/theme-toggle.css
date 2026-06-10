@@ -1,0 +1,26 @@
+.theme-toggle {
+  width: 44px;
+  height: 44px;
+  border-radius: 50%;
+  background: var(--primary-50);
+  border: none;
+  font-size: 1.25rem;
+  cursor: pointer;
+  transition: all var(--transition-fast);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  color: var(--primary);
+}
+
+.theme-toggle:hover {
+  background: var(--primary);
+  color: var(--white);
+  transform: rotate(180deg);
+}
+
+.theme-toggle.accessibility-mode {
+  width: 56px;
+  height: 56px;
+  font-size: 1.5rem;
+}

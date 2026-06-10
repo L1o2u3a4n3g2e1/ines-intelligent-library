@@ -1,9 +1,9 @@
 {
-  "process_id": 15004,
-  "started_at": "2026-06-09 12:51:39",
-  "start_epoch": 1,
+  "process_id": 3732,
+  "started_at": "2026-06-09 21:30:15",
+  "start_epoch": 16,
   "target_epoch": 100,
-  "max_runtime_hours": 96.0,
+  "max_runtime_hours": 96,
   "epochs": 100,
   "batch_size": 8,
   "max_train": 3000,

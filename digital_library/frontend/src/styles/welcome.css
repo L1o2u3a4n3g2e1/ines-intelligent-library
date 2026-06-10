@@ -1,0 +1,152 @@
+.welcome-container {
+  min-height: 100vh;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  padding: 2rem;
+  background: linear-gradient(135deg, var(--primary-50) 0%, #F0F9FF 100%);
+  position: relative;
+  overflow: hidden;
+}
+
+.welcome-content {
+  max-width: 600px;
+  z-index: 10;
+  text-align: center;
+}
+
+.welcome-header {
+  margin-bottom: 3rem;
+  animation: fadeIn var(--transition-base) ease-out;
+}
+
+.welcome-title {
+  font-size: 3.5rem;
+  font-weight: 700;
+  color: var(--primary);
+  margin-bottom: 1rem;
+  line-height: 1.1;
+}
+
+.welcome-subtitle {
+  font-size: 1.25rem;
+  color: var(--text-muted);
+  font-weight: 500;
+}
+
+.welcome-language {
+  margin: 2rem 0;
+  padding: 1.5rem;
+  background: var(--white);
+  border-radius: var(--radius-xl);
+  box-shadow: var(--shadow-sm);
+  border: 1px solid var(--primary-50);
+}
+
+.language-label {
+  font-size: 0.875rem;
+  color: var(--text-muted);
+  margin-bottom: 1rem;
+  display: block;
+  font-weight: 600;
+  text-transform: uppercase;
+  letter-spacing: 0.05em;
+}
+
+.welcome-actions {
+  display: flex;
+  gap: 1rem;
+  margin: 2rem 0;
+  flex-direction: column;
+  animation: slideInUp var(--transition-base) ease-out;
+}
+
+@media (min-width: 640px) {
+  .welcome-actions {
+    flex-direction: row;
+    justify-content: center;
+  }
+
+  .welcome-actions .btn {
+    flex: 1;
+    max-width: 200px;
+  }
+}
+
+.welcome-guest {
+  margin-top: 2rem;
+}
+
+.welcome-illustration {
+  position: absolute;
+  top: 0;
+  right: -200px;
+  width: 400px;
+  height: 400px;
+  opacity: 0.3;
+  z-index: 0;
+}
+
+.illustration-circle {
+  position: absolute;
+  border-radius: 50%;
+  background: linear-gradient(135deg, var(--primary), var(--accent-blue));
+}
+
+.circle-1 {
+  width: 300px;
+  height: 300px;
+  top: -100px;
+  right: -100px;
+  animation: float 6s ease-in-out infinite;
+}
+
+.circle-2 {
+  width: 200px;
+  height: 200px;
+  bottom: 50px;
+  right: -50px;
+  animation: float 8s ease-in-out infinite 1s;
+}
+
+.circle-3 {
+  width: 150px;
+  height: 150px;
+  bottom: -75px;
+  right: 100px;
+  animation: float 7s ease-in-out infinite 2s;
+}
+
+@keyframes float {
+  0%, 100% {
+    transform: translateY(0px);
+  }
+  50% {
+    transform: translateY(-20px);
+  }
+}
+
+@keyframes slideInUp {
+  from {
+    opacity: 0;
+    transform: translateY(20px);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
+}
+
+@media (max-width: 768px) {
+  .welcome-title {
+    font-size: 2.5rem;
+  }
+
+  .welcome-subtitle {
+    font-size: 1.125rem;
+  }
+
+  .welcome-illustration {
+    right: -300px;
+  }
+}

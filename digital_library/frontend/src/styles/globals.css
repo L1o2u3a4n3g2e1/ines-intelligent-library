@@ -1,0 +1,175 @@
+@import url('https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700;800&family=Playfair+Display:ital,wght@0,400;0,500;0,600;0,700;1,400;1,500&display=swap');
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
+
+@layer base {
+  :root {
+    --brand-50:  #F5F3FF;
+    --brand-100: #EDE9FE;
+    --brand-200: #DDD6FE;
+    --brand-300: #C4B5FD;
+    --brand-500: #8B5CF6;
+    --brand-600: #7C3AED;
+    --brand-800: #5B21B6;
+    --brand-950: #2E1065;
+    --audio-600: #0891B2;
+    --audio-100: #E0F2FE;
+    --lang-600:  #059669;
+    --lang-100:  #D1FAE5;
+    --gray-400:  #9CA3AF;
+    --gray-500:  #6B7280;
+    /* reader dark mode */
+    --reader-dark-bg:      #1E1B4B;
+    --reader-dark-text:    #E8E3FF;
+    --reader-dark-surface: #2D2172;
+    --reader-light-text:   #1E1B4B;
+    /* legacy aliases */
+    --violet: #7C3AED; --violet-light: #8B5CF6; --violet-dark: #5B21B6; --violet-deep: #2E1065;
+    --surface: #EDE9FE; --border: #DDD6FE; --bg: #F5F3FF;
+  }
+  * { box-sizing: border-box; }
+  html { scroll-behavior: smooth; }
+  body {
+    font-family: 'Inter', system-ui, -apple-system, sans-serif;
+    background-color: #F5F3FF;
+    color: #2E1065;
+    line-height: 1.6;
+    -webkit-font-smoothing: antialiased;
+  }
+  h1, h2, h3 { font-family: 'Playfair Display', Georgia, serif; color: #2E1065; }
+  ::-webkit-scrollbar { width: 6px; height: 6px; }
+  ::-webkit-scrollbar-track { background: #F5F3FF; border-radius: 10px; }
+  ::-webkit-scrollbar-thumb { background: #DDD6FE; border-radius: 10px; }
+  ::-webkit-scrollbar-thumb:hover { background: #8B5CF6; }
+  ::selection { background: rgba(124,58,237,0.20); color: #2E1065; }
+  #root { min-height: 100vh; }
+}
+
+@layer components {
+  .glass {
+    background: rgba(255,255,255,0.65);
+    backdrop-filter: blur(14px);
+    -webkit-backdrop-filter: blur(14px);
+    border: 1px solid rgba(221,214,254,0.45);
+  }
+  .glass-warm {
+    background: rgba(245,243,255,0.78);
+    backdrop-filter: blur(12px);
+    border: 1px solid rgba(221,214,254,0.35);
+  }
+  .btn-primary {
+    @apply inline-flex items-center justify-center gap-2
+    bg-brand-600 text-white px-6 py-3 rounded-2xl font-semibold
+    hover:bg-brand-800 active:scale-[0.97] transition-all duration-200
+    shadow-[0_4px_20px_-4px_rgba(124,58,237,0.40)]
+    hover:shadow-[0_8px_30px_-6px_rgba(124,58,237,0.55)]
+    focus:outline-none focus:ring-2 focus:ring-brand-500 focus:ring-offset-2
+    disabled:opacity-50 disabled:cursor-not-allowed disabled:transform-none;
+  }
+  .btn-secondary {
+    @apply inline-flex items-center justify-center gap-2
+    bg-white text-brand-600 px-6 py-3 rounded-2xl font-semibold
+    border border-brand-200 hover:bg-brand-50 hover:border-brand-500
+    active:scale-[0.97] transition-all duration-200
+    focus:outline-none focus:ring-2 focus:ring-brand-500 focus:ring-offset-2;
+  }
+  .btn-ghost {
+    @apply inline-flex items-center justify-center gap-2
+    text-brand-600 px-4 py-2 rounded-xl font-medium
+    hover:bg-brand-100/70 active:scale-[0.97] transition-all duration-200
+    focus:outline-none focus:ring-2 focus:ring-brand-500 focus:ring-offset-1;
+  }
+  .btn-danger {
+    @apply inline-flex items-center justify-center gap-2
+    bg-red-600 text-white px-6 py-3 rounded-2xl font-semibold
+    hover:bg-red-700 active:scale-[0.97] transition-all duration-200
+    focus:outline-none focus:ring-2 focus:ring-red-500 focus:ring-offset-2
+    disabled:opacity-50 disabled:cursor-not-allowed;
+  }
+  .card {
+    @apply bg-white rounded-3xl overflow-hidden transition-all duration-300
+    border border-gray-200
+    shadow-[0_4px_20px_-4px_rgba(124,58,237,0.08),_0_2px_8px_-2px_rgba(124,58,237,0.04)]
+    hover:shadow-[0_12px_40px_-8px_rgba(124,58,237,0.18),_0_4px_12px_-4px_rgba(124,58,237,0.08)]
+    hover:-translate-y-0.5;
+  }
+  .input-field {
+    @apply w-full bg-white border border-brand-200 rounded-2xl px-4 py-3
+    text-brand-950 placeholder-gray-400
+    focus:outline-none focus:ring-2 focus:ring-brand-600 focus:border-transparent
+    transition-all duration-200
+    shadow-[inset_0_2px_6px_rgba(124,58,237,0.04)];
+  }
+  .section-title {
+    @apply font-['Playfair_Display'] font-semibold text-brand-950 text-xl md:text-2xl;
+  }
+  .badge {
+    @apply inline-flex items-center gap-1 px-2.5 py-0.5 rounded-full text-xs font-medium;
+  }
+  .shimmer {
+    background: linear-gradient(90deg, #EDE9FE 25%, #DDD6FE 50%, #EDE9FE 75%);
+    background-size: 200% 100%;
+    animation: shimmer 1.5s infinite;
+  }
+}
+
+/* ─── Animations ───────────────────────────────────────── */
+@keyframes float        { 0%,100%{transform:translateY(0)} 50%{transform:translateY(-14px)} }
+@keyframes shimmer      { 0%{background-position:-200% 0} 100%{background-position:200% 0} }
+@keyframes micPulse {
+  0%,100%{transform:scale(1);box-shadow:0 0 0 0 rgba(124,58,237,0.5)}
+  50%    {transform:scale(1.08);box-shadow:0 0 0 12px rgba(124,58,237,0)}
+}
+@keyframes fadeSlideUp  { from{opacity:0;transform:translateY(16px)} to{opacity:1;transform:translateY(0)} }
+@keyframes fadeIn       { from{opacity:0} to{opacity:1} }
+@keyframes scaleIn      { from{opacity:0;transform:scale(0.94)} to{opacity:1;transform:scale(1)} }
+
+.animate-float          { animation: float 6s ease-in-out infinite; }
+.animate-mic            { animation: micPulse 1.4s ease-in-out infinite; }
+.animate-fade-slide-up  { animation: fadeSlideUp 0.45s ease-out both; }
+.animate-fade-in        { animation: fadeIn 0.35s ease-out both; }
+.animate-scale-in       { animation: scaleIn 0.3s ease-out both; }
+
+/* ─── High Contrast Mode ────────────────────────────────── */
+body.high-contrast                             { background-color: #000 !important; color: #fff !important; }
+body.high-contrast .card                       { background: #111 !important; border-color: #fff !important; color: #fff !important; }
+body.high-contrast .btn-primary                { background: #FFDD00 !important; color: #000 !important; border: 2px solid #FFDD00 !important; box-shadow: none !important; }
+body.high-contrast .btn-secondary,
+body.high-contrast .btn-ghost                  { background: transparent !important; color: #FFDD00 !important; border: 2px solid #FFDD00 !important; }
+body.high-contrast .input-field                { background: #000 !important; color: #fff !important; border: 2px solid #fff !important; }
+body.high-contrast header, body.high-contrast aside, body.high-contrast nav { background: #0A0A0A !important; border-color: #555 !important; }
+body.high-contrast p, body.high-contrast span, body.high-contrast label,
+body.high-contrast h1, body.high-contrast h2, body.high-contrast h3 { color: #fff !important; }
+body.high-contrast a                           { color: #FFDD00 !important; }
+body.high-contrast img                         { filter: contrast(1.2) brightness(0.9); }
+
+/* ─── Low Literacy Mode ─────────────────────────────────── */
+body.low-literacy                              { font-size: 1.2rem !important; line-height: 2 !important; }
+body.low-literacy h1, body.low-literacy h2,
+body.low-literacy h3                           { font-size: 2rem !important; }
+body.low-literacy button, body.low-literacy a[role="button"] { min-height: 58px !important; font-size: 1.1rem !important; }
+body.low-literacy p, body.low-literacy span,
+body.low-literacy label                        { font-size: 1.15rem !important; }
+body.low-literacy .card                        { padding: 1.75rem !important; }
+body.low-literacy input, body.low-literacy select { padding: 1rem 1.25rem !important; font-size: 1.1rem !important; }
+.voice-hint                                    { display: none; }
+body.low-literacy .voice-hint                  { display: flex !important; }
+
+/* ─── Reading page ──────────────────────────────────────── */
+.reading-text                     { font-size: 1.1rem; line-height: 2; letter-spacing: 0.012em; color: #1E1B4B; }
+.reading-text p                   { margin-bottom: 1.5em; }
+.reading-text h1,.reading-text h2,
+.reading-text h3                  { margin: 1.6em 0 0.8em; color: #2E1065; }
+
+/* ─── Audio slider ──────────────────────────────────────── */
+input[type=range].audio-range {
+  -webkit-appearance:none; width:100%; height:4px;
+  background: linear-gradient(to right, #7C3AED var(--val,0%), #DDD6FE var(--val,0%));
+  border-radius:2px; outline:none; cursor:pointer;
+}
+input[type=range].audio-range::-webkit-slider-thumb {
+  -webkit-appearance:none; width:14px; height:14px;
+  background:#7C3AED; border-radius:50%;
+  box-shadow:0 2px 6px rgba(124,58,237,0.45); cursor:pointer;
+}

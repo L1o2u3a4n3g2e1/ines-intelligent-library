@@ -1,0 +1,126 @@
+.reader-container {
+  max-width: 900px;
+  margin: 0 auto;
+  padding: 2rem 1rem;
+}
+
+.reader-header {
+  margin-bottom: 2rem;
+  padding-bottom: 1.5rem;
+  border-bottom: 2px solid var(--gray-200);
+}
+
+.reader-header h1 {
+  color: var(--primary);
+  margin: 1rem 0 0.5rem 0;
+  font-size: 2rem;
+}
+
+.reader-author {
+  color: var(--text-muted);
+  font-style: italic;
+}
+
+.reader-toolbar {
+  display: flex;
+  gap: 1rem;
+  align-items: center;
+  padding: 1.5rem;
+  background: var(--primary-50);
+  border-radius: var(--radius-lg);
+  margin-bottom: 2rem;
+  flex-wrap: wrap;
+  border: 1px solid var(--primary-100);
+}
+
+.reader-toolbar .btn-icon {
+  transition: all var(--transition-fast);
+}
+
+.reader-toolbar .btn-icon:hover {
+  background: var(--primary);
+  color: var(--white);
+  transform: scale(1.1);
+}
+
+.reader-toolbar .btn-icon.active {
+  background: var(--primary);
+  color: var(--white);
+}
+
+.font-size-control {
+  display: flex;
+  gap: 0.75rem;
+  align-items: center;
+  margin-left: auto;
+}
+
+.font-size-control label {
+  font-size: 0.875rem;
+  font-weight: 600;
+  color: var(--text-primary);
+}
+
+.font-size-control input {
+  width: 100px;
+  accent-color: var(--soft-brown);
+}
+
+.font-size-control span {
+  font-size: 0.875rem;
+  color: var(--text-secondary);
+  min-width: 50px;
+}
+
+.reader-content {
+  background: var(--white);
+  padding: 2rem;
+  border-radius: var(--radius-lg);
+  line-height: 1.8;
+  color: var(--text-primary);
+  box-shadow: var(--shadow-sm);
+  word-wrap: break-word;
+  white-space: pre-wrap;
+  overflow-wrap: break-word;
+}
+
+.reading {
+  color: var(--text-secondary);
+  margin: 2rem 0;
+}
+
+@media (max-width: 768px) {
+  .reader-container {
+    padding: 1rem;
+  }
+
+  .reader-header h1 {
+    font-size: 1.5rem;
+  }
+
+  .reader-toolbar {
+    justify-content: center;
+  }
+
+  .font-size-control {
+    margin-left: 0;
+    width: 100%;
+    justify-content: space-between;
+  }
+
+  .reader-content {
+    padding: 1rem;
+  }
+}
+
+@media (max-width: 480px) {
+  .reader-toolbar {
+    gap: 0.5rem;
+  }
+
+  .reader-toolbar .btn-icon {
+    width: 40px;
+    height: 40px;
+    font-size: 1.25rem;
+  }
+}

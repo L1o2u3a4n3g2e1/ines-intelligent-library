@@ -1,0 +1,142 @@
+.book-card {
+  background: var(--white);
+  border-radius: var(--radius-lg);
+  overflow: hidden;
+  box-shadow: var(--shadow-sm);
+  transition: all var(--transition-base);
+  cursor: pointer;
+  position: relative;
+  display: flex;
+  flex-direction: column;
+}
+
+.book-card:hover {
+  box-shadow: var(--shadow-lg);
+  transform: translateY(-4px);
+}
+
+.book-card.accessibility-mode {
+  padding: 1rem;
+}
+
+.book-image {
+  width: 100%;
+  height: 200px;
+  background: linear-gradient(135deg, var(--primary), var(--accent-blue));
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  overflow: hidden;
+  font-size: 4rem;
+}
+
+.book-image img {
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+}
+
+.book-content {
+  padding: 1.5rem;
+  flex: 1;
+  display: flex;
+  flex-direction: column;
+}
+
+.book-title {
+  font-size: 1.125rem;
+  font-weight: 700;
+  color: var(--primary);
+  margin-bottom: 0.5rem;
+  line-height: 1.4;
+  display: -webkit-box;
+  -webkit-line-clamp: 2;
+  -webkit-box-orient: vertical;
+  overflow: hidden;
+}
+
+.book-author {
+  font-size: 0.875rem;
+  color: var(--text-muted);
+  margin-bottom: 1rem;
+  font-weight: 500;
+}
+
+.book-description {
+  font-size: 0.875rem;
+  color: var(--text-muted);
+  line-height: 1.5;
+  display: -webkit-box;
+  -webkit-line-clamp: 2;
+  -webkit-box-orient: vertical;
+  overflow: hidden;
+  margin-bottom: 1rem;
+  flex: 1;
+}
+
+.book-meta {
+  display: flex;
+  gap: 1rem;
+  flex-wrap: wrap;
+  font-size: 0.75rem;
+  color: var(--text-muted);
+}
+
+.book-meta span {
+  display: flex;
+  align-items: center;
+  gap: 0.25rem;
+}
+
+.btn-bookmark {
+  position: absolute;
+  top: 0.5rem;
+  right: 0.5rem;
+  width: 40px;
+  height: 40px;
+  border-radius: 50%;
+  background: rgba(255, 255, 255, 0.9);
+  border: none;
+  font-size: 1.5rem;
+  cursor: pointer;
+  transition: all var(--transition-fast);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  box-shadow: var(--shadow-sm);
+}
+
+.btn-bookmark:hover {
+  background: var(--white);
+  box-shadow: var(--shadow-md);
+  transform: scale(1.1);
+}
+
+.btn-bookmark.bookmarked {
+  color: var(--accent-gold);
+}
+
+@media (max-width: 768px) {
+  .book-content {
+    padding: 1rem;
+  }
+
+  .book-title {
+    font-size: 1rem;
+  }
+
+  .book-description {
+    font-size: 0.75rem;
+  }
+}
+
+@media (max-width: 480px) {
+  .book-image {
+    height: 150px;
+    font-size: 3rem;
+  }
+
+  .book-card.accessibility-mode {
+    padding: 0.75rem;
+  }
+}

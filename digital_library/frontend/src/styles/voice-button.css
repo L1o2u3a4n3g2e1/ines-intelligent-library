@@ -1,0 +1,86 @@
+.voice-button {
+  position: relative;
+  width: 48px;
+  height: 48px;
+  border-radius: 50%;
+  background: var(--primary);
+  color: var(--white);
+  border: none;
+  font-size: 1.25rem;
+  cursor: pointer;
+  transition: all var(--transition-fast);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  box-shadow: var(--shadow-md);
+  white-space: nowrap;
+}
+
+.voice-button:hover {
+  background: var(--primary-dark);
+  transform: scale(1.1);
+  box-shadow: var(--shadow-lg);
+}
+
+.voice-button.listening {
+  background: var(--accent-red);
+  animation: pulse 1s cubic-bezier(0.4, 0, 0.6, 1) infinite;
+}
+
+.voice-icon {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  width: 100%;
+  height: 100%;
+}
+
+.voice-pulse {
+  position: absolute;
+  width: 100%;
+  height: 100%;
+  border-radius: 50%;
+  border: 2px solid rgba(239, 68, 68, 0.5);
+  animation: expand 1.5s ease-out infinite;
+}
+
+@keyframes expand {
+  0% {
+    width: 100%;
+    height: 100%;
+    opacity: 1;
+  }
+  100% {
+    width: 150%;
+    height: 150%;
+    opacity: 0;
+  }
+}
+
+.voice-text {
+  position: absolute;
+  top: 100%;
+  left: 50%;
+  transform: translateX(-50%);
+  margin-top: 0.5rem;
+  background: rgba(0, 0, 0, 0.8);
+  color: var(--white);
+  padding: 0.5rem 1rem;
+  border-radius: var(--radius-md);
+  font-size: 0.75rem;
+  white-space: nowrap;
+  z-index: 10;
+}
+
+.voice-button.accessibility-mode {
+  width: 60px;
+  height: 60px;
+  font-size: 1.5rem;
+}
+
+@media (max-width: 480px) {
+  .voice-button {
+    width: 56px;
+    height: 56px;
+  }
+}

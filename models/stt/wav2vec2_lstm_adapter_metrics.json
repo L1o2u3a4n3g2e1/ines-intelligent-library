@@ -3,16 +3,16 @@
   "base_model": "facebook/wav2vec2-base-960h",
   "model_type": "Wav2Vec2 pretrained acoustic encoder plus residual BiLSTM CTC adapter",
   "dataset": "LibriSpeech real held-out audio",
-  "evaluated_at": "2026-06-09 20:46:36",
-  "adapter_trained_epochs": 5,
+  "evaluated_at": "2026-06-10 03:15:54",
+  "adapter_trained_epochs": 15,
   "train_samples": 3000,
   "dev": {
     "samples": 240,
-    "wer": 0.03251759973181361,
-    "word_accuracy": 0.9674824002681864,
-    "cer": 0.009486319050077439,
-    "character_accuracy": 0.9905136809499225,
-    "sentence_exact_accuracy": 0.7,
+    "wer": 0.03855179349648005,
+    "word_accuracy": 0.9614482065035199,
+    "cer": 0.010325245224574084,
+    "character_accuracy": 0.9896747547754259,
+    "sentence_exact_accuracy": 0.6583333333333333,
     "examples": [
       {
         "reference": "SHE DID NOT ALTOGETHER LIKE HIM",
@@ -36,7 +36,7 @@
       },
       {
         "reference": "AMBROSCH HE MAKE GOOD FARMER",
-        "prediction": "AMBROSCH HE MAYE GOOD FARMER",
+        "prediction": "AMBROSCH HE MAY GOOD FARMER",
         "audio": "C:\\xampp\\htdocs\\digital-library\\speech_datasets\\LibriSpeech\\dev-clean\\1988\\147956\\1988-147956-0014.flac"
       },
       {
@@ -58,11 +58,11 @@
   },
   "test": {
     "samples": 240,
-    "wer": 0.033124128312412834,
-    "word_accuracy": 0.9668758716875872,
-    "cer": 0.008902677547717003,
-    "character_accuracy": 0.991097322452283,
-    "sentence_exact_accuracy": 0.7416666666666667,
+    "wer": 0.03556485355648536,
+    "word_accuracy": 0.9644351464435147,
+    "cer": 0.009779456397113374,
+    "character_accuracy": 0.9902205436028866,
+    "sentence_exact_accuracy": 0.725,
     "examples": [
       {
         "reference": "IS IT NOT IMPOSSIBLE HE MURMURED ALOUD THAT ANY CITY SHOULD DISAPPEAR SO COMPLETELY",
@@ -106,10 +106,10 @@
       }
     ]
   },
-  "overall_word_accuracy": 0.9671791359778867,
-  "overall_word_accuracy_percent": 96.71791359778868,
-  "overall_sentence_exact_accuracy": 0.7208333333333333,
-  "overall_sentence_exact_accuracy_percent": 72.08333333333333,
+  "overall_word_accuracy": 0.9629416764735172,
+  "overall_word_accuracy_percent": 96.29416764735173,
+  "overall_sentence_exact_accuracy": 0.6916666666666667,
+  "overall_sentence_exact_accuracy_percent": 69.16666666666667,
   "production_ready": true,
   "required_word_accuracy_percent": 80,
   "required_sentence_exact_accuracy_percent": 50,
@@ -126,7 +126,7 @@
     "head_lr": 1e-05,
     "early_stop_patience": 10,
     "minimum_epochs": 10,
-    "max_runtime_hours": 96.0,
+    "max_runtime_hours": 96,
     "num_threads": 2,
     "resume": true,
     "base_model": "facebook/wav2vec2-base-960h",

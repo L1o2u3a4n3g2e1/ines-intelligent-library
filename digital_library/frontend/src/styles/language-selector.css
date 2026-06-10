@@ -1,0 +1,49 @@
+.language-selector {
+  display: flex;
+  gap: 0.5rem;
+  flex-wrap: wrap;
+  justify-content: center;
+}
+
+.language-selector.accessibility-mode {
+  gap: 1rem;
+}
+
+.language-btn {
+  padding: 0.75rem 1.5rem;
+  background: var(--white);
+  color: var(--primary);
+  border: 2px solid var(--primary);
+  border-radius: var(--radius-lg);
+  font-weight: 600;
+  font-size: 0.875rem;
+  cursor: pointer;
+  transition: all var(--transition-fast);
+}
+
+.language-btn:hover {
+  background: var(--primary-50);
+}
+
+.language-btn.active {
+  background: var(--primary);
+  color: var(--white);
+  box-shadow: var(--shadow-md);
+}
+
+.language-selector.accessibility-mode .language-btn {
+  padding: 1rem 2rem;
+  font-size: 1rem;
+  font-weight: 700;
+}
+
+@media (max-width: 640px) {
+  .language-selector {
+    gap: 0.5rem;
+  }
+
+  .language-btn {
+    padding: 0.625rem 1rem;
+    font-size: 0.75rem;
+  }
+}
