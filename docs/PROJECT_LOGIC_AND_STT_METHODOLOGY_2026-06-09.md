@@ -193,12 +193,13 @@ Metric formulas:
 - Word Precision: `Correct Predicted Words / All Predicted Words`.
 - Word Recall: `Correct Predicted Words / All Reference Words`.
 - Word F1: `2 * Precision * Recall / (Precision + Recall)`.
+- Token-presence ROC-AUC: one-vs-rest ROC-AUC over CTC vocabulary-token
+  presence in the transcript using each token's maximum predicted probability
+  across audio frames.
 
-ROC-AUC is not a primary metric for open-vocabulary CTC speech-to-text because
-the final task is sequence transcription, not binary classification. If needed,
-it can only be approximated by reformulating the model output as token-level
-one-vs-rest classification, but WER, CER, sentence exact accuracy, and word F1
-measure transcription quality more directly.
+ROC-AUC is included because it was requested for supervision. WER, CER, sentence
+exact accuracy, and word F1 remain the primary speech-to-text metrics because
+they measure final transcription quality directly.
 
 ## Backend and frontend STT connection
 

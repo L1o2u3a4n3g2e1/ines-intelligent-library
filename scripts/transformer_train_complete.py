@@ -20,6 +20,7 @@ from __future__ import annotations
 import argparse
 import json
 import math
+import os
 import random
 import shutil
 import time
@@ -28,7 +29,9 @@ from pathlib import Path
 from typing import Iterable
 
 import librosa
+import numpy as np
 import torch
+from sklearn.metrics import roc_auc_score
 from torch.utils.data import DataLoader, Dataset
 from transformers import Wav2Vec2ForCTC, Wav2Vec2Processor
 
@@ -41,6 +44,7 @@ DEFAULT_TEST_MANIFEST = ROOT / "speech_datasets" / "manifests" / "test.jsonl"
 DEFAULT_OUTPUT_DIR = ROOT / "transformer_model_candidate"
 DEFAULT_PROMOTE_DIR = ROOT / "transformer_model"
 METRICS_PATH = ROOT / "models" / "stt" / "transformer_metrics.json"
+COMMON_VOICE_MANIFEST = ROOT / "speech_datasets" / "manifests" / "common_voice_en_train.jsonl"
 
 
 @dataclass
@@ -83,6 +87,81 @@ def load_manifest(path: Path, limit: int, seed: int) -> list[Sample]:
                 )
     random.Random(seed).shuffle(rows)
     return rows[:limit] if limit > 0 else rows
+
+
+def load_manifests(paths: list[str], limit: int, seed: int) -> list[Sample]:
+    loaded: list[Sample] = []
+    for path in paths:
+        manifest_path = Path(path)
+        if manifest_path.exists():
+            loaded.extend(load_manifest(manifest_path, 0, seed + len(loaded)))
+    random.Random(seed).shuffle(loaded)
+    return loaded[:limit] if limit > 0 else loaded
+
+
+def prepare_common_voice_manifest(limit: int, seed: int) -> Path | None:
+    """Create a Mozilla Common Voice English manifest when HF access is available.
+
+    Common Voice datasets can require an accepted Hugging Face dataset license.
+    If the download is blocked, the function returns None and training continues
+    with local LibriSpeech manifests.
+    """
+    if COMMON_VOICE_MANIFEST.exists():
+        return COMMON_VOICE_MANIFEST
+    try:
+        from datasets import Audio, load_dataset
+    except Exception as error:
+        print(json.dumps({"event": "common_voice_unavailable", "error": str(error)}), flush=True)
+        return None
+
+    dataset = None
+    errors = []
+    for dataset_name in (
+        "mozilla-foundation/common_voice_17_0",
+        "mozilla-foundation/common_voice_16_1",
+        "mozilla-foundation/common_voice_15_0",
+        "mozilla-foundation/common_voice_13_0",
+        "mozilla-foundation/common_voice_11_0",
+    ):
+        try:
+            dataset = load_dataset(dataset_name, "en", split=f"train[:{max(1, limit)}]")
+            dataset = dataset.cast_column("audio", Audio(sampling_rate=16000))
+            print(json.dumps({"event": "common_voice_loaded", "dataset": dataset_name}, ensure_ascii=False), flush=True)
+            break
+        except Exception as error:
+            errors.append({"dataset": dataset_name, "error": str(error)})
+    if dataset is None:
+        print(json.dumps({"event": "common_voice_unavailable", "errors": errors}, ensure_ascii=False), flush=True)
+        return None
+
+    audio_dir = ROOT / "speech_datasets" / "CommonVoice" / "en"
+    audio_dir.mkdir(parents=True, exist_ok=True)
+    COMMON_VOICE_MANIFEST.parent.mkdir(parents=True, exist_ok=True)
+    rows = []
+    for index, sample in enumerate(dataset):
+        sentence = normalize_text(sample.get("sentence", ""))
+        audio = sample.get("audio") or {}
+        array = audio.get("array")
+        if not sentence or array is None:
+            continue
+        target = audio_dir / f"common_voice_en_{index:05d}.wav"
+        import soundfile as sf
+
+        sf.write(str(target), np.asarray(array, dtype=np.float32), 16000)
+        rows.append(
+            {
+                "audio_filepath": str(target),
+                "text": sentence,
+                "dataset": "Mozilla Common Voice",
+                "source_split": "train",
+            }
+        )
+
+    with COMMON_VOICE_MANIFEST.open("w", encoding="utf-8") as handle:
+        for row in rows:
+            handle.write(json.dumps(row, ensure_ascii=False) + "\n")
+    print(json.dumps({"event": "common_voice_manifest_created", "samples": len(rows)}), flush=True)
+    return COMMON_VOICE_MANIFEST if rows else None
 
 
 class ManifestSpeechDataset(Dataset):
@@ -171,6 +250,8 @@ def evaluate_samples(
     word_deletions = 0
     word_substitutions = 0
     exact = 0
+    auc_true = []
+    auc_scores = []
     examples = []
     started = time.time()
 
@@ -183,6 +264,7 @@ def evaluate_samples(
             inputs = processor(audio, sampling_rate=16000, return_tensors="pt")
             input_values = inputs.input_values.to(device)
             logits = model(input_values).logits
+            probabilities = torch.softmax(logits, dim=-1)
             predicted_ids = torch.argmax(logits, dim=-1)
             prediction = normalize_text(processor.batch_decode(predicted_ids)[0])
             reference = normalize_text(sample.text)
@@ -199,6 +281,16 @@ def evaluate_samples(
             char_errors += char_counts["distance"]
             char_total += len(reference)
             exact += int(reference == prediction)
+
+            reference_ids = set(processor.tokenizer(reference).input_ids)
+            token_scores = probabilities.max(dim=1).values.squeeze(0).detach().cpu().numpy()
+            vocab_size = len(token_scores)
+            for token_id in range(vocab_size):
+                if token_id == processor.tokenizer.pad_token_id:
+                    continue
+                auc_true.append(1 if token_id in reference_ids else 0)
+                auc_scores.append(float(token_scores[token_id]))
+
             if len(examples) < 8:
                 examples.append(
                     {
@@ -217,6 +309,10 @@ def evaluate_samples(
     precision = true_positives / max(1, true_positives + false_positives)
     recall = true_positives / max(1, true_positives + false_negatives)
     f1 = 2 * precision * recall / max(1e-12, precision + recall)
+    roc_auc = None
+    roc_auc_note = "Token-presence ROC-AUC over the CTC vocabulary; primary STT quality is still WER/CER/F1."
+    if len(set(auc_true)) == 2:
+        roc_auc = float(roc_auc_score(auc_true, auc_scores))
     return {
         "samples": len(samples),
         "wer": wer,
@@ -231,8 +327,8 @@ def evaluate_samples(
             "deletions": word_deletions,
             "substitutions": word_substitutions,
         },
-        "roc_auc": None,
-        "roc_auc_note": "ROC-AUC is not a primary open-vocabulary CTC speech-to-text metric; WER, CER, word F1, and sentence exact accuracy are reported instead.",
+        "roc_auc": roc_auc,
+        "roc_auc_note": roc_auc_note,
         "elapsed_seconds": round(time.time() - started, 2),
         "examples": examples,
     }
@@ -255,7 +351,13 @@ def train(args: argparse.Namespace) -> dict:
     torch.manual_seed(args.seed)
     device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
 
-    train_samples = load_manifest(Path(args.train_manifest), args.max_train_samples, args.seed)
+    train_manifests = [args.train_manifest]
+    if args.include_common_voice:
+        common_voice_manifest = prepare_common_voice_manifest(args.common_voice_samples, args.seed)
+        if common_voice_manifest is not None:
+            train_manifests.append(str(common_voice_manifest))
+
+    train_samples = load_manifests(train_manifests, args.max_train_samples, args.seed)
     dev_samples = load_manifest(Path(args.dev_manifest), args.max_eval_samples, args.seed + 1)
     test_samples = load_manifest(Path(args.test_manifest), args.max_test_samples, args.seed + 2)
     if not train_samples:
@@ -318,6 +420,10 @@ def train(args: argparse.Namespace) -> dict:
     aggregate_sentence_accuracy = (
         dev_result["sentence_exact_accuracy_percent"] + test_result["sentence_exact_accuracy_percent"]
     ) / 2
+    aggregate_word_f1 = (dev_result["word_f1_percent"] + test_result["word_f1_percent"]) / 2
+    aggregate_roc_auc = None
+    if dev_result.get("roc_auc") is not None and test_result.get("roc_auc") is not None:
+        aggregate_roc_auc = (float(dev_result["roc_auc"]) + float(test_result["roc_auc"])) / 2
 
     promoted = False
     if args.promote and aggregate_word_accuracy >= args.promote_min_word_accuracy:
@@ -334,7 +440,7 @@ def train(args: argparse.Namespace) -> dict:
         "base_model": args.base_model,
         "model_type": "Wav2Vec2 Transformer encoder with CTC head",
         "dataset": "LibriSpeech real local manifests",
-        "train_manifest": display_path(args.train_manifest),
+        "train_manifest": [display_path(path) for path in train_manifests],
         "dev_manifest": display_path(args.dev_manifest),
         "test_manifest": display_path(args.test_manifest),
         "epochs_completed": epoch,
@@ -347,6 +453,8 @@ def train(args: argparse.Namespace) -> dict:
         "test": test_result,
         "overall_word_accuracy_percent": aggregate_word_accuracy,
         "overall_sentence_exact_accuracy_percent": aggregate_sentence_accuracy,
+        "overall_word_f1_percent": aggregate_word_f1,
+        "overall_token_presence_roc_auc": aggregate_roc_auc,
         "overall_wer_percent": 100.0 - aggregate_word_accuracy,
         "losses": losses,
         "elapsed_minutes": round((time.time() - started) / 60, 2),
@@ -356,6 +464,13 @@ def train(args: argparse.Namespace) -> dict:
     }
 
     metrics_target = Path(args.metrics_path)
+    if args.preserve_metrics_unless_promoted and not promoted and metrics_target.exists():
+        metrics_target = metrics_target.with_name(f"{metrics_target.stem}_candidate{metrics_target.suffix}")
+        result["metrics_preserved"] = True
+        result["preserved_metrics_path"] = display_path(args.metrics_path)
+        result["candidate_metrics_path"] = display_path(metrics_target)
+    else:
+        result["metrics_preserved"] = False
     metrics_target.parent.mkdir(parents=True, exist_ok=True)
     metrics_target.write_text(json.dumps(result, indent=2), encoding="utf-8")
     print(json.dumps({"event": "complete", **result}, ensure_ascii=False, indent=2), flush=True)
@@ -383,6 +498,9 @@ def parse_args(argv: Iterable[str] | None = None) -> argparse.Namespace:
     parser.add_argument("--seed", type=int, default=42)
     parser.add_argument("--promote", action="store_true")
     parser.add_argument("--promote-min-word-accuracy", type=float, default=75.0)
+    parser.add_argument("--preserve-metrics-unless-promoted", action="store_true")
+    parser.add_argument("--include-common-voice", action="store_true")
+    parser.add_argument("--common-voice-samples", type=int, default=80)
     return parser.parse_args(argv)
 
 

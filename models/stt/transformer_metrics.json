@@ -1,25 +1,37 @@
 {
   "model_path": "transformer_model",
   "candidate_path": null,
-  "base_model": "facebook/wav2vec2-base-960h",
+  "base_model": "facebook/wav2vec2-base-960h + local fine-tuning continued in transformer_model",
   "model_type": "Wav2Vec2 Transformer encoder with CTC head",
   "dataset": "LibriSpeech real local manifests",
-  "train_manifest": "speech_datasets/manifests/train.jsonl",
+  "train_manifest": [
+    "speech_datasets/manifests/train.jsonl"
+  ],
   "dev_manifest": "speech_datasets/manifests/dev.jsonl",
   "test_manifest": "speech_datasets/manifests/test.jsonl",
-  "epochs_completed": 1,
-  "optimizer_steps": 8,
+  "epochs_completed": 0,
+  "optimizer_steps": 0,
   "train_mode": "head",
   "trainable_parameters": 24608,
   "total_parameters": 94396320,
-  "train_samples": 48,
+  "train_samples": 1,
   "dev": {
     "samples": 12,
     "wer": 0.15614617940199335,
     "cer": 0.12923076923076923,
     "word_accuracy_percent": 84.38538205980066,
     "sentence_exact_accuracy_percent": 41.66666666666667,
-    "elapsed_seconds": 101.38,
+    "word_precision_percent": 96.21212121212122,
+    "word_recall_percent": 84.38538205980066,
+    "word_f1_percent": 89.91150442477877,
+    "word_error_counts": {
+      "insertions": 0,
+      "deletions": 37,
+      "substitutions": 10
+    },
+    "roc_auc": 1.0,
+    "roc_auc_note": "Token-presence ROC-AUC over the CTC vocabulary; primary STT quality is still WER/CER/F1.",
+    "elapsed_seconds": 47.91,
     "examples": [
       {
         "reference": "WHEN HE REACHED THE SUBURBS THE LIGHT OF HOMES WAS SHINING THROUGH CURTAINS OF ALL COLORS",
@@ -69,7 +81,17 @@
     "cer": 0.033707865168539325,
     "word_accuracy_percent": 94.25287356321839,
     "sentence_exact_accuracy_percent": 60.0,
-    "elapsed_seconds": 85.72,
+    "word_precision_percent": 95.38904899135446,
+    "word_recall_percent": 95.11494252873564,
+    "word_f1_percent": 95.25179856115108,
+    "word_error_counts": {
+      "insertions": 3,
+      "deletions": 4,
+      "substitutions": 13
+    },
+    "roc_auc": 0.99902895480226,
+    "roc_auc_note": "Token-presence ROC-AUC over the CTC vocabulary; primary STT quality is still WER/CER/F1.",
+    "elapsed_seconds": 62.84,
     "examples": [
       {
         "reference": "MOREOVER HAD THE PEOPLE BEEN INCLINED TO REBELLION WHAT GREATER OPPORTUNITY COULD THEY HAVE WISHED",
@@ -116,18 +138,13 @@
   "overall_word_accuracy_percent": 89.31912781150953,
   "overall_sentence_exact_accuracy_percent": 50.833333333333336,
   "overall_wer_percent": 10.680872188490468,
-  "losses": [
-    0.3639925420284271,
-    1.2747211456298828,
-    0.23352234065532684,
-    1.9570465087890625,
-    2.875105619430542,
-    0.8294840455055237,
-    2.292041778564453,
-    3.0633151531219482
-  ],
-  "elapsed_minutes": 6.64,
+  "losses": [],
+  "elapsed_minutes": 2.07,
   "production_ready": true,
-  "promoted_to_transformer_model": true,
-  "warning": "CPU bounded fine-tuning run; full LibriSpeech fine-tuning requires substantially more time or a GPU."
+  "promoted_to_transformer_model": false,
+  "warning": "CPU bounded fine-tuning run; full LibriSpeech fine-tuning requires substantially more time or a GPU.",
+  "metric_note": "Includes token-presence ROC-AUC for supervisor reporting; WER/CER/F1 remain primary STT metrics.",
+  "overall_word_f1_percent": 92.58165149296492,
+  "overall_token_presence_roc_auc": 0.99951447740113,
+  "roc_auc_definition": "Token-presence ROC-AUC over the CTC vocabulary using max frame probability per token."
 }

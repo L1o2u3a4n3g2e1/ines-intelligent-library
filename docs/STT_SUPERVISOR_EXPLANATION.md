@@ -144,6 +144,8 @@ Current metrics:
 - aggregate WER: 10.68%;
 - test word accuracy: 94.25%;
 - dev word accuracy: 84.39%.
+- dev token-presence ROC-AUC: 1.0000;
+- test token-presence ROC-AUC: 0.9990.
 
 ## Metrics to explain
 
@@ -163,19 +165,48 @@ Formula:
 F1 = 2 * (Precision * Recall) / (Precision + Recall)
 ```
 
-## About ROC-AUC
+## ROC-AUC used in this project
 
-ROC-AUC is useful for binary or multi-class classification where each example
-has class probabilities. Open-vocabulary speech-to-text is sequence generation,
-so ROC-AUC is not the normal main metric.
+The supervisor requested ROC-AUC, so the project reports a token-presence
+ROC-AUC over the CTC vocabulary.
 
-If the supervisor asks for ROC-AUC, the technically correct answer is:
+Definition used here:
 
-> ROC-AUC is not the primary evaluation metric for CTC-based open-vocabulary
-> speech-to-text. The project reports WER, CER, word accuracy, sentence exact
-> accuracy, and word-level F1. ROC-AUC could only be added by reformulating the
-> problem as token-level one-vs-rest classification, but that would not measure
-> final transcription quality as directly as WER/CER.
+1. For each transcript, mark which vocabulary tokens appear in the label.
+2. For each audio file, get the model's maximum probability for each token
+   across all audio frames.
+3. Compute one-vs-rest ROC-AUC from those token labels and probabilities.
+
+This is valid for showing the model separates present speech tokens from absent
+tokens. However, WER/CER/F1 remain the better measurements of final transcript
+quality.
+
+Current ROC-AUC:
+
+- dev token-presence ROC-AUC: 1.0000;
+- test token-presence ROC-AUC: 0.9990.
+
+## What CTC does and why we use it
+
+CTC means Connectionist Temporal Classification.
+
+We use CTC because speech audio and text labels do not have the same length. For
+example, a 5-second audio file has many acoustic frames, but the label may only
+have a short sentence. We do not manually label the exact millisecond where each
+character starts and ends.
+
+CTC solves that alignment problem by adding a blank token and allowing repeated
+tokens:
+
+```text
+Raw frame output:  _ B B _ O O _ K S _
+CTC collapse:      B O K S
+```
+
+During training, CTC loss searches over possible alignments between audio frames
+and transcript tokens. During decoding, repeated tokens are collapsed and blank
+tokens are removed. This makes supervised speech-to-text possible with only
+audio files and sentence transcripts.
 
 ## Frontend and backend connection
 
