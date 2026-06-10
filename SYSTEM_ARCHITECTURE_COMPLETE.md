@@ -39,9 +39,9 @@ Active path:
 4. If Transformer STT fails, PHP calls `http://127.0.0.1:5001/transcribe`.
 5. PHP logs the request in `voice_search_logs` and searches the catalog.
 
-The current model is pretrained `facebook/wav2vec2-base-960h`, a Wav2Vec2
-Transformer encoder with CTC head. Local fine-tuning epochs for the connected
-checkpoint are currently `0`.
+The current model is the local `transformer_model/` checkpoint, initialized
+from pretrained `facebook/wav2vec2-base-960h` Wav2Vec2 Transformer CTC weights
+and fine-tuned on real LibriSpeech manifest samples.
 
 ## Text-to-speech
 

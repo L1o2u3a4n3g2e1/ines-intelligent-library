@@ -51,25 +51,31 @@ export default function Reader() {
   const startedAtRef = useRef(0);
   const book = bookState.data;
   const sections = useMemo(() => splitIntoSections(contentState.data?.text), [contentState.data?.text]);
-  const currentSection = sections[sectionIndex] || '';
-  const progress = sections.length ? Math.round(((sectionIndex + 1) / sections.length) * 100) : 0;
+  const fallbackSection = useMemo(() => {
+    if (sections.length || !book) return '';
+    const summary = [book.title, book.description].filter(Boolean).join('. ');
+    return summary ? `No full readable text was extracted from this book file. Narrating the available catalog summary instead.\n\n${summary}` : '';
+  }, [book, sections.length]);
+  const readableSections = sections.length ? sections : (fallbackSection ? [fallbackSection] : []);
+  const currentSection = readableSections[sectionIndex] || '';
+  const progress = readableSections.length ? Math.round(((sectionIndex + 1) / readableSections.length) * 100) : 0;
   const audioFiles = (book?.files || []).filter((file) => file.file_type === 'audio');
 
   useEffect(() => {
-    if (initializedRef.current || contentState.loading || progressState.loading || !sections.length) return;
+    if (initializedRef.current || contentState.loading || progressState.loading || !readableSections.length) return;
     const savedPage = Number(progressState.data?.last_page || 0);
-    setSectionIndex(Math.min(Math.max(savedPage, 0), sections.length - 1));
+    setSectionIndex(Math.min(Math.max(savedPage, 0), readableSections.length - 1));
     initializedRef.current = true;
-  }, [contentState.loading, progressState.loading, progressState.data, sections.length]);
+  }, [contentState.loading, progressState.loading, progressState.data, readableSections.length]);
 
   useEffect(() => () => audioRef.current?.pause(), []);
 
   async function saveProgress(index, readingSeconds = 0) {
-    if (!sections.length) return;
-    const percentage = Math.round(((index + 1) / sections.length) * 100);
+    if (!readableSections.length) return;
+    const percentage = Math.round(((index + 1) / readableSections.length) * 100);
     await progressApi.updateProgress(id, {
       last_page: index,
-      last_section: `Section ${index + 1} of ${sections.length}`,
+      last_section: `Section ${index + 1} of ${readableSections.length}`,
       progress_percentage: percentage,
       total_reading_time_seconds: readingSeconds,
       completed_status: percentage >= 100 ? 'completed' : 'in_progress',
@@ -115,9 +121,9 @@ export default function Reader() {
   }
 
   async function moveToSection(nextIndex) {
-    if (!sections.length) return;
+    if (!readableSections.length) return;
     stopSpeech();
-    const bounded = Math.min(Math.max(nextIndex, 0), sections.length - 1);
+    const bounded = Math.min(Math.max(nextIndex, 0), readableSections.length - 1);
     setSectionIndex(bounded);
     await saveProgress(bounded);
   }
@@ -143,9 +149,14 @@ export default function Reader() {
           {contentState.error && <div className="inline-error">{contentState.error}</div>}
           {speechError && <div className="inline-error" role="alert">{speechError}</div>}
           <div className="reader-status">
-            <strong>{sections.length ? `Section ${sectionIndex + 1} of ${sections.length}` : 'No readable sections'}</strong>
+            <strong>{readableSections.length ? `Section ${sectionIndex + 1} of ${readableSections.length}` : 'No readable sections'}</strong>
             <span>{progress}% completed</span>
           </div>
+          {!sections.length && fallbackSection && (
+            <div className="inline-note">
+              Full text could not be extracted from this PDF. Audio narration is using the catalog summary.
+            </div>
+          )}
           <div className="progress-track"><span style={{ width: `${progress}%` }} /></div>
           <div className="reader-text">
             <h2>{book?.title}</h2>
@@ -176,7 +187,7 @@ export default function Reader() {
             <Button size="icon" aria-label={speechState === 'paused' ? 'Resume narration' : 'Play gTTS narration'} onClick={speak} disabled={!currentSection || ['playing', 'loading'].includes(speechState)}><Play size={18} /></Button>
             <Button variant="secondary" size="icon" aria-label="Pause narration" onClick={pause} disabled={speechState !== 'playing'}><Pause size={18} /></Button>
             <Button variant="ghost" size="icon" aria-label="Stop narration" onClick={stopSpeech} disabled={speechState === 'idle'}><Square size={18} /></Button>
-            <Button variant="ghost" size="icon" aria-label="Next section" disabled={!sections.length || sectionIndex >= sections.length - 1} onClick={() => moveToSection(sectionIndex + 1)}><SkipForward size={18} /></Button>
+            <Button variant="ghost" size="icon" aria-label="Next section" disabled={!readableSections.length || sectionIndex >= readableSections.length - 1} onClick={() => moveToSection(sectionIndex + 1)}><SkipForward size={18} /></Button>
             <Button variant="ghost" size="icon" aria-label="Reset progress" onClick={resetProgress}><RotateCcw size={18} /></Button>
           </div>
           {audioFiles.length > 0 && (

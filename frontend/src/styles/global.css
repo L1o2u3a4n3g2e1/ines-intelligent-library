@@ -237,8 +237,9 @@ textarea { min-height: 110px; padding: 12px; }
 .form-grid { min-width: 0; display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 14px; }
 label { min-width: 0; display: grid; gap: 7px; font-weight: 700; color: var(--ink); }
 .span-2 { grid-column: span 2; }
-.inline-error, .inline-info, .mock-banner { padding: 12px 14px; border-radius: var(--radius); margin-bottom: 16px; font-weight: 700; }
+.inline-error, .inline-info, .inline-note, .mock-banner { padding: 12px 14px; border-radius: var(--radius); margin-bottom: 16px; font-weight: 700; }
 .inline-error { background: #fff1f2; color: #9f1239; border: 1px solid #fecdd3; }
+.inline-note { background: #f0fdf4; color: var(--green); border: 1px solid #bbf7d0; }
 .inline-info, .mock-banner { background: #eef7ff; color: #075985; border: 1px solid #bae6fd; }
 .status-pill {
   display: inline-flex;

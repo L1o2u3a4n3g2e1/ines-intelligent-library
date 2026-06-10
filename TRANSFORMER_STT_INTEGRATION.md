@@ -29,19 +29,21 @@ part of the active system.
 2. `transformer_librispeech_model/` if it contains a valid `config.json`;
 3. otherwise `facebook/wav2vec2-base-960h`.
 
-At the time of this update, the connected production service uses the pretrained
-`facebook/wav2vec2-base-960h` Wav2Vec2 Transformer CTC model. Local Transformer
-fine-tuning epochs are therefore `0` until a real checkpoint is saved.
+At the time of this update, the connected production service uses the local
+`transformer_model/` checkpoint. It was initialized from pretrained
+`facebook/wav2vec2-base-960h` Wav2Vec2 Transformer CTC weights and fine-tuned
+with a CPU-bounded real LibriSpeech run.
 
 ## Verified baseline
 
 Current metric report: `models/stt/transformer_metrics.json`.
 
-- Dataset: real LibriSpeech held-out audio.
-- Samples: 40 total, 20 `dev-clean` and 20 `test-clean`.
-- Word accuracy: 95.16%.
-- Exact sentence accuracy: 75.00%.
-- WER: 4.84%.
+- Dataset: real LibriSpeech local manifest audio.
+- Training: 48 `train-clean-100` samples, 8 optimizer steps, head-only tuning.
+- Evaluation: 12 `dev-clean` samples and 20 `test-clean` samples.
+- Aggregate word accuracy: 89.32%.
+- Aggregate exact sentence accuracy: 50.83%.
+- Aggregate WER: 10.68%.
 
 The retired Wav2Vec2 + BiLSTM adapter score is not used by the app anymore.
 

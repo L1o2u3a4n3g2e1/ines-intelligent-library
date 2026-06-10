@@ -57,10 +57,11 @@ Catalog microphone audio follows this order:
 1. Wav2Vec2 Transformer CTC service on port `5006`;
 2. Whisper `tiny.en` fallback on port `5001` if the Transformer service is unavailable or cannot decode the recording.
 
-The current connected Transformer service uses pretrained
-`facebook/wav2vec2-base-960h` weights unless a valid local
-`transformer_model/` checkpoint exists. Its local held-out LibriSpeech smoke
-evaluation is tracked in `models/stt/transformer_metrics.json`: 95.16% word
-accuracy and 75.00% exact-sentence accuracy on 40 real dev/test clips.
+The current connected Transformer service loads the local
+`transformer_model/` checkpoint. That checkpoint was fine-tuned from pretrained
+`facebook/wav2vec2-base-960h` weights on real LibriSpeech manifest samples.
+The latest CPU-bounded evaluation is tracked in
+`models/stt/transformer_metrics.json`: 89.32% aggregate word accuracy and
+50.83% exact-sentence accuracy across 12 dev-clean and 20 test-clean clips.
 
 See `docs/PROJECT_LOGIC_AND_STT_METHODOLOGY_2026-06-09.md`.

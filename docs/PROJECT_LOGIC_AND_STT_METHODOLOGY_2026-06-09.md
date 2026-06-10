@@ -111,8 +111,8 @@ The active STT service is `scripts/transformer_speech_service.py`.
 The service first looks for a local fine-tuned checkpoint in
 `transformer_model/` or `transformer_librispeech_model/`. If no `config.json`
 exists there, it loads the pretrained Hugging Face model directly. At this
-moment the connected production service is the pretrained Wav2Vec2 Transformer
-CTC model, not the removed LSTM adapter.
+moment the connected production service is `transformer_model/`, a local
+checkpoint fine-tuned from `facebook/wav2vec2-base-960h`.
 
 ## Dataset and loading method
 
@@ -142,13 +142,13 @@ and the processor decodes IDs into English text.
 
 ## Training status and epochs
 
-Current connected Transformer local fine-tuning epochs: `0`.
+Current connected Transformer local fine-tuning: `1` CPU-bounded pass over the
+selected training subset, `8` optimizer steps, head-only tuning.
 
-That means the project is currently using pretrained Wav2Vec2 weights directly.
-The pretrained base model was originally trained outside this project on
-LibriSpeech 960 hours. We should not claim local Transformer fine-tuning epochs
-until `scripts/transformer_train_complete.py` produces a real
-`transformer_model/` checkpoint and writes updated metrics.
+The checkpoint starts from pretrained Wav2Vec2 weights. The pretrained base
+model was originally trained outside this project on LibriSpeech 960 hours.
+The local project training then used real LibriSpeech manifest samples and
+saved the promoted checkpoint to `transformer_model/`.
 
 Future fine-tuning methodology:
 
@@ -163,14 +163,22 @@ Future fine-tuning methodology:
 
 ## Accuracy and metrics
 
-Current local held-out baseline file: `models/stt/transformer_metrics.json`.
+Current local metric file: `models/stt/transformer_metrics.json`.
 
-Measured on 40 real LibriSpeech held-out clips:
+Latest real LibriSpeech run:
 
-- aggregate word accuracy: 95.16%;
-- aggregate exact sentence accuracy: 75.00%;
-- aggregate WER: 4.84%;
-- local fine-tuning epochs: 0.
+- train samples: 48 from `train-clean-100`;
+- optimizer steps: 8;
+- train mode: Wav2Vec2 encoder frozen, CTC projection head trainable;
+- dev evaluation: 12 `dev-clean` clips, 84.39% word accuracy, 41.67% exact sentence accuracy;
+- test evaluation: 20 `test-clean` clips, 94.25% word accuracy, 60.00% exact sentence accuracy;
+- aggregate word accuracy: 89.32%;
+- aggregate exact sentence accuracy: 50.83%;
+- aggregate WER: 10.68%.
+
+This is a real-data CPU-bounded fine-tune, not a full 100-hour LibriSpeech
+training run. Full fine-tuning of the complete dataset needs much more time or
+a CUDA GPU.
 
 The previous 96.29% word accuracy / 69.17% exact sentence accuracy belonged to
 the retired Wav2Vec2 + BiLSTM adapter. It is not the active production

@@ -25,6 +25,7 @@ ml-speech/models/*.pt
 models/**/*.pt
 transformer_model/
 transformer_librispeech_model/
+transformer_model_candidate*/
 lstm_librispeech_model/
 voice_data/
 training_logs/
