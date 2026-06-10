@@ -9,6 +9,7 @@ from fastapi import FastAPI, File, HTTPException, Query, UploadFile
 
 ROOT = Path(__file__).resolve().parents[2]
 OPEN_STT_URL = os.getenv("INES_OPEN_STT_URL", "http://127.0.0.1:5001")
+TRANSFORMER_STT_URL = os.getenv("INES_TRANSFORMER_STT_URL", "http://127.0.0.1:5006")
 LSTM_CTC_URL = os.getenv("INES_LSTM_CTC_URL", "http://127.0.0.1:5004")
 WAV2VEC2_LSTM_URL = os.getenv(
     "INES_WAV2VEC2_LSTM_URL",
@@ -45,12 +46,14 @@ def read_last_json_line(path: Path) -> dict | None:
 @app.get("/health")
 def health():
     open_stt = service_health(OPEN_STT_URL)
+    transformer_stt = service_health(TRANSFORMER_STT_URL)
     lstm_ctc = service_health(LSTM_CTC_URL)
     wav2vec2_lstm = service_health(WAV2VEC2_LSTM_URL)
     return {
         "status": "ready" if open_stt["reachable"] else "degraded",
         "service": "ines-python-ai-backend",
         "open_vocabulary_stt": open_stt,
+        "transformer_stt": transformer_stt,
         "custom_lstm_ctc": lstm_ctc,
         "wav2vec2_lstm_adapter": wav2vec2_lstm,
     }
@@ -60,6 +63,7 @@ def health():
 def models():
     return {
         "open_vocabulary_stt": service_health(OPEN_STT_URL),
+        "transformer_stt": service_health(TRANSFORMER_STT_URL),
         "custom_lstm_ctc": service_health(LSTM_CTC_URL),
         "wav2vec2_lstm_adapter": service_health(WAV2VEC2_LSTM_URL),
         "text_to_speech": {
@@ -94,6 +98,7 @@ async def transcribe(
     if mode == "open":
         attempts = []
         for name, service_url in (
+            ("transformer_wav2vec2_ctc", TRANSFORMER_STT_URL),
             ("wav2vec2_residual_bilstm_ctc", WAV2VEC2_LSTM_URL),
             ("mfcc_bilstm_ctc", LSTM_CTC_URL),
         ):

@@ -70,6 +70,7 @@ function service_upload_audio(string $url, array $file, int $timeout = 60): ?arr
 
 function ai_model_status(): array
 {
+    $transformerHealth = service_json_get('http://127.0.0.1:5006/health', 2);
     $transformerMetricsPath = __DIR__ . '/../../models/stt/transformer_metrics.json';
     $transformerMetrics = is_file($transformerMetricsPath) ? json_decode(file_get_contents($transformerMetricsPath), true) : null;
 
@@ -80,8 +81,8 @@ function ai_model_status(): array
         [
             'name' => 'Transformer English Speech-to-Text (PRIMARY)',
             'task' => 'speech_to_text_search_primary',
-            'source' => $transformerMetrics['model_path'] ?? './transformer_model',
-            'status' => ($transformerMetrics['production_ready'] ?? false) ? 'ready' : 'training',
+            'source' => $transformerMetrics['model_path'] ?? ($transformerHealth['model_path'] ?? 'facebook/wav2vec2-base-960h'),
+            'status' => $transformerHealth ? (($transformerMetrics['production_ready'] ?? true) ? 'ready' : 'training') : 'service_offline',
             'accuracy_note' => $transformerMetrics
                 ? 'Held-out word accuracy: ' . round((float)$transformerMetrics['overall_word_accuracy_percent'], 2) .
                     '%; sentence exact accuracy: ' . round((float)$transformerMetrics['overall_sentence_exact_accuracy_percent'], 2) . '%.'
@@ -134,8 +135,8 @@ function local_open_vocabulary_transcribe(array $file): ?array
         return null;
     }
 
-    // Try Transformer model (PRIMARY) - port 5004
-    $transformerResult = service_upload_audio('http://127.0.0.1:5004/api/stt/transcribe', $file, 120);
+    // Try Transformer model (PRIMARY) - port 5006
+    $transformerResult = service_upload_audio('http://127.0.0.1:5006/api/stt/transcribe', $file, 120);
     if ($transformerResult) {
         return $transformerResult;
     }

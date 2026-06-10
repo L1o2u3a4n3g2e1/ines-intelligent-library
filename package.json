@@ -1,12 +1,17 @@
 {
   "name": "digital-library",
   "version": "1.0.0",
-  "description": "INES Intelligent Digital Library with Voice Search and Text-to-Speech",
+  "description": "INES Intelligent Digital Library React frontend and live acceptance tooling",
   "type": "module",
   "scripts": {
-    "dev": "vite --host 127.0.0.1 --port 5173",
+    "start": "vite --host 127.0.0.1 --port 3000",
+    "dev": "vite --host 127.0.0.1 --port 3000",
     "build": "vite build",
-    "preview": "vite preview"
+    "preview": "vite preview --host 127.0.0.1 --port 4173",
+    "start:ai": "powershell -ExecutionPolicy Bypass -File scripts/start_ai_services.ps1",
+    "train:stt:four-day": "powershell -ExecutionPolicy Bypass -File scripts/start_wav2vec2_lstm_four_day.ps1",
+    "train:stt:status": "powershell -ExecutionPolicy Bypass -File scripts/check_wav2vec2_lstm_training.ps1",
+    "test:live": "node scripts/live_system_acceptance.mjs"
   },
   "keywords": [
     "digital-library",
@@ -22,8 +27,7 @@
     "mysql2": "^3.22.3",
     "react": "^18.3.1",
     "react-dom": "^18.3.1",
-    "react-router-dom": "^6.30.4",
-    "axios": "^1.6.0"
+    "react-router-dom": "^6.30.4"
   },
   "devDependencies": {
     "@vitejs/plugin-react": "^4.7.0",

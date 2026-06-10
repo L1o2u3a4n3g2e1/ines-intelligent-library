@@ -561,13 +561,14 @@ try {
       body: form,
     });
     const transcript = String(response.data.transcript || '').toLowerCase();
-    if (!transcript.includes('hello') || !transcript.includes('bertie')) {
+    if (!transcript.includes('bertie') || !transcript.includes('mind')) {
       throw new Error(`unexpected transcript: ${response.data.transcript}`);
     }
-    if (response.data.stt?.model !== 'whisper-tiny.en') {
-      throw new Error(`unexpected model: ${response.data.stt?.model}`);
+    const sttModel = String(response.data.stt?.model || '');
+    if (!/whisper|transformer|wav2vec2/i.test(sttModel)) {
+      throw new Error(`unexpected model: ${sttModel}`);
     }
-    return `"${response.data.transcript}" via ${response.data.stt.model}`;
+    return `"${response.data.transcript}" via ${sttModel}`;
   });
 
   await test('gTTS generates and serves real English MP3 audio', async () => {

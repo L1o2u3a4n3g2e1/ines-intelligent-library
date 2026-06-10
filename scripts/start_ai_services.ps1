@@ -21,6 +21,13 @@ $services = @(
         Error = 'python-ai-backend.err.log'
     },
     @{
+        Name = 'Transformer STT'
+        Port = 5006
+        Script = 'scripts\transformer_speech_service.py'
+        Output = 'transformer-stt.out.log'
+        Error = 'transformer-stt.err.log'
+    },
+    @{
         Name = 'Open-vocabulary LSTM-CTC'
         Port = 5004
         Script = 'scripts\english_lstm_ctc_service.py'

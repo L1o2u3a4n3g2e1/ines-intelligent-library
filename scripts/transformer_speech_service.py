@@ -1,145 +1,135 @@
-#!/usr/bin/env python3
-"""
-Transformer Speech-to-Text Inference Service
-Listens on port 5004 for audio files
-Uses the trained Transformer model (Wav2Vec2 + CTC)
-"""
-
+import math
 import os
-import sys
-import torch
-import numpy as np
-import librosa
-import logging
+import shutil
+import subprocess
+import tempfile
 from pathlib import Path
-from flask import Flask, request, jsonify
-import traceback
 
-logging.basicConfig(level=logging.INFO)
-logger = logging.getLogger(__name__)
-
-app = Flask(__name__)
-
-# Model paths
-MODEL_PATH = "./transformer_model"
-LIBRISPEECH_MODEL_PATH = "./transformer_librispeech_model"
-
-# Load model and processor
-model = None
-processor = None
-
+import librosa
+import torch
+import uvicorn
+from fastapi import FastAPI, File, HTTPException, UploadFile
 from transformers import Wav2Vec2ForCTC, Wav2Vec2Processor
 
-# Try to load the trained transformer model with fallback
-try:
-    if os.path.isdir(MODEL_PATH) and os.path.isfile(os.path.join(MODEL_PATH, "pytorch_model.bin")):
-        logger.info(f"Loading trained model from {MODEL_PATH}")
-        processor = Wav2Vec2Processor.from_pretrained(MODEL_PATH)
-        model = Wav2Vec2ForCTC.from_pretrained(MODEL_PATH)
-        logger.info("Successfully loaded trained model")
-    else:
-        raise FileNotFoundError(f"Trained model not found at {MODEL_PATH}")
-except Exception as e:
-    logger.warning(f"Could not load trained model: {e}. Trying LibriSpeech model...")
-    try:
-        if os.path.isdir(LIBRISPEECH_MODEL_PATH) and os.path.isfile(os.path.join(LIBRISPEECH_MODEL_PATH, "pytorch_model.bin")):
-            logger.info(f"Loading LibriSpeech model from {LIBRISPEECH_MODEL_PATH}")
-            processor = Wav2Vec2Processor.from_pretrained(LIBRISPEECH_MODEL_PATH)
-            model = Wav2Vec2ForCTC.from_pretrained(LIBRISPEECH_MODEL_PATH)
-            logger.info("Successfully loaded LibriSpeech model")
-        else:
-            raise FileNotFoundError(f"LibriSpeech model not found at {LIBRISPEECH_MODEL_PATH}")
-    except Exception as e2:
-        logger.warning(f"Could not load LibriSpeech model: {e2}. Using Facebook base model...")
-        processor = Wav2Vec2Processor.from_pretrained("facebook/wav2vec2-base-960h")
-        model = Wav2Vec2ForCTC.from_pretrained("facebook/wav2vec2-base-960h")
-        logger.info("Using facebook/wav2vec2-base-960h base model")
 
-if model is None:
-    logger.error("Failed to load any model!")
-    sys.exit(1)
+MODEL_CANDIDATES = [
+    Path("transformer_model"),
+    Path("transformer_librispeech_model"),
+]
+BASE_MODEL = os.getenv("INES_TRANSFORMER_MODEL", "facebook/wav2vec2-base-960h")
+MAX_UPLOAD_BYTES = 12 * 1024 * 1024
 
+app = FastAPI(title="INES Transformer English STT")
+torch.set_num_threads(max(1, min(4, torch.get_num_threads())))
+
+
+def resolve_model_source() -> str:
+    for candidate in MODEL_CANDIDATES:
+        if (candidate / "config.json").exists():
+            return str(candidate)
+    return BASE_MODEL
+
+
+MODEL_SOURCE = resolve_model_source()
+processor = Wav2Vec2Processor.from_pretrained(MODEL_SOURCE)
+model = Wav2Vec2ForCTC.from_pretrained(MODEL_SOURCE)
 model.eval()
-logger.info(f"Speech-to-Text model ready: {model.num_parameters():,} parameters")
 
-def transcribe_audio(audio_path):
-    """Transcribe audio using Transformer model"""
-    try:
-        # Load audio
-        audio, sr = librosa.load(audio_path, sr=16000, mono=True)
 
-        # Process
-        inputs = processor(audio, sampling_rate=16000, return_tensors="pt")
+def normalize_browser_audio(source: Path, target: Path) -> None:
+    ffmpeg = shutil.which("ffmpeg")
+    if ffmpeg:
+        completed = subprocess.run(
+            [
+                ffmpeg,
+                "-hide_banner",
+                "-loglevel",
+                "error",
+                "-y",
+                "-i",
+                str(source),
+                "-ac",
+                "1",
+                "-ar",
+                "16000",
+                "-t",
+                "10",
+                str(target),
+            ],
+            capture_output=True,
+            text=True,
+            timeout=25,
+        )
+        if completed.returncode == 0 and target.exists() and target.stat().st_size > 44:
+            return
+    audio, _ = librosa.load(str(source), sr=16000, mono=True)
+    import soundfile as sf
+    sf.write(str(target), audio, 16000)
 
-        # Inference
-        with torch.no_grad():
-            logits = model(**inputs).logits
 
-        # Decode
-        pred_ids = torch.argmax(logits, dim=-1)
-        transcription = processor.batch_decode(pred_ids)[0]
+def confidence_from_logits(logits: torch.Tensor) -> float:
+    probabilities = torch.softmax(logits, dim=-1)
+    token_confidence = probabilities.max(dim=-1).values.mean().item()
+    return max(0.0, min(1.0, float(token_confidence)))
 
-        return transcription
 
-    except Exception as e:
-        logger.error(f"Transcription error: {e}")
-        traceback.print_exc()
-        return None
-
-@app.route('/health', methods=['GET'])
+@app.get("/health")
 def health():
-    """Health check endpoint"""
-    return jsonify({'status': 'healthy', 'model': 'transformer', 'service': 'speech-to-text'}), 200
+    return {
+        "status": "ready",
+        "model": "transformer-wav2vec2-ctc",
+        "base_model": BASE_MODEL,
+        "model_path": MODEL_SOURCE,
+        "parameters": model.num_parameters(),
+        "language": "en",
+        "task": "open_vocabulary_speech_to_text",
+    }
 
-@app.route('/api/stt/transcribe', methods=['POST'])
-def transcribe():
-    """Transcribe audio endpoint"""
-    try:
-        if 'file' not in request.files and 'audio' not in request.files:
-            return jsonify({'error': 'No audio file provided'}), 400
 
-        audio_file = request.files.get('file') or request.files.get('audio')
-        if not audio_file:
-            return jsonify({'error': 'Invalid audio file'}), 400
-
-        # Save temporarily
-        temp_path = '/tmp/audio_temp.wav'
-        audio_file.save(temp_path)
-
-        # Transcribe
-        transcription = transcribe_audio(temp_path)
-
-        # Cleanup
-        if os.path.exists(temp_path):
-            os.remove(temp_path)
-
-        if transcription:
-            return jsonify({
-                'transcription': transcription,
-                'predicted_text': transcription,
-                'model': 'transformer',
-                'confidence': 0.95
-            }), 200
-        else:
-            return jsonify({'error': 'Transcription failed'}), 500
-
-    except Exception as e:
-        logger.error(f"Error in /api/stt/transcribe: {e}")
-        traceback.print_exc()
-        return jsonify({'error': str(e)}), 500
-
-@app.route('/model/info', methods=['GET'])
+@app.get("/model/info")
 def model_info():
-    """Get model information"""
-    return jsonify({
-        'model_type': 'Transformer',
-        'base_model': 'facebook/wav2vec2-base-960h',
-        'parameters': model.num_parameters(),
-        'model_path': MODEL_PATH if os.path.isdir(MODEL_PATH) else LIBRISPEECH_MODEL_PATH,
-        'status': 'ready',
-        'service': 'transformer-speech-to-text'
-    }), 200
+    return health()
 
-if __name__ == '__main__':
-    logger.info("Starting Transformer Speech-to-Text Service on port 5004")
-    app.run(host='127.0.0.1', port=5004, debug=False, threaded=True)
+
+@app.post("/transcribe")
+@app.post("/api/stt/transcribe")
+async def transcribe(audio: UploadFile = File(None), file: UploadFile = File(None)):
+    upload = file or audio
+    if upload is None:
+        raise HTTPException(status_code=422, detail="Audio file is required")
+    payload = await upload.read()
+    if not payload:
+        raise HTTPException(status_code=422, detail="Audio file is empty")
+    if len(payload) > MAX_UPLOAD_BYTES:
+        raise HTTPException(status_code=413, detail="Audio file is too large")
+
+    suffix = Path(upload.filename or "voice.webm").suffix or ".webm"
+    with tempfile.TemporaryDirectory(prefix="ines-transformer-stt-") as directory:
+        source = Path(directory) / f"recording{suffix}"
+        normalized = Path(directory) / "normalized.wav"
+        source.write_bytes(payload)
+        try:
+            normalize_browser_audio(source, normalized)
+            audio_data, _ = librosa.load(str(normalized), sr=16000, mono=True)
+            inputs = processor(audio_data, sampling_rate=16000, return_tensors="pt")
+            with torch.inference_mode():
+                logits = model(**inputs).logits
+            predicted_ids = torch.argmax(logits, dim=-1)
+            transcription = " ".join(processor.batch_decode(predicted_ids)[0].strip().split())
+            confidence = confidence_from_logits(logits)
+        except Exception as error:
+            raise HTTPException(status_code=422, detail=str(error)) from error
+
+    return {
+        "success": bool(transcription),
+        "transcription": transcription,
+        "predicted_text": transcription,
+        "confidence": confidence if math.isfinite(confidence) else 0.0,
+        "model": "transformer-wav2vec2-ctc",
+        "model_path": MODEL_SOURCE,
+        "language": "en",
+    }
+
+
+if __name__ == "__main__":
+    uvicorn.run(app, host="127.0.0.1", port=5006, log_level="info")
