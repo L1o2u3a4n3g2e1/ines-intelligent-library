@@ -41,6 +41,12 @@ export function getBookPage(bookId, page = 1) {
   return apiRequest(`/books/${bookId}/page${asQuery({ page })}`);
 }
 
+export function bookPageImageUrl(bookId, page = 1) {
+  const token = localStorage.getItem('ines_token') || '';
+  const query = asQuery({ page, token });
+  return `${API_BASE_URL}/books/${bookId}/page-image${query}`;
+}
+
 export function fileDownloadUrl(fileId) {
   const token = localStorage.getItem('ines_token') || '';
   const query = token ? `?token=${encodeURIComponent(token)}` : '';

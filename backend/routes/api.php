@@ -386,6 +386,50 @@ function extract_document_page_text(string $path, int $page = 1, int $maxChars =
     ];
 }
 
+function render_pdf_page_image(string $path, int $page = 1): ?array
+{
+    if (strtolower(pathinfo($path, PATHINFO_EXTENSION)) !== 'pdf') {
+        return null;
+    }
+    $page = max(1, $page);
+    $target = $path . '.page-' . $page . '.jpg';
+    if (!is_file($target) || filesize($target) === 0) {
+        $script = realpath(__DIR__ . '/../../scripts/extract_pdf_cover.py');
+        if (!$script) {
+            return null;
+        }
+        $command = 'python ' . escapeshellarg($script) . ' ' .
+            escapeshellarg($path) . ' ' . escapeshellarg($target) . ' ' . $page;
+        $output = [];
+        $exitCode = 1;
+        exec($command . ' 2>&1', $output, $exitCode);
+        if ($exitCode !== 0) {
+            return null;
+        }
+        if (!is_file($target) || filesize($target) === 0) {
+            return null;
+        }
+    }
+    return [
+        'absolute_path' => $target,
+        'mime_type' => 'image/jpeg',
+        'original_name' => 'page-' . $page . '.jpg',
+    ];
+}
+
+function serve_image_file(array $file): void
+{
+    $absolute = $file['absolute_path'];
+    if (!is_file($absolute)) {
+        Response::error('Image not found', 404);
+    }
+    header('Content-Type: ' . ($file['mime_type'] ?? 'image/jpeg'));
+    header('Content-Length: ' . filesize($absolute));
+    header('Cache-Control: private, max-age=86400');
+    readfile($absolute);
+    exit;
+}
+
 function generate_gtts_audio(array $user, string $text, string $language = 'en'): array
 {
     $text = trim($text);
@@ -1522,6 +1566,17 @@ function route(string $method, string $path): void
         ]);
     }
 
+    if (preg_match('#^/book-files/(\d+)/page-image$#', $path, $m) && $method === 'GET') {
+        current_user();
+        $file = stored_book_file(Validator::int($m[1]));
+        $page = Validator::int($_GET['page'] ?? 1, 'page');
+        $image = render_pdf_page_image($file['absolute_path'], $page);
+        if (!$image) {
+            Response::error('This page image could not be rendered', 422);
+        }
+        serve_image_file($image);
+    }
+
     if (preg_match('#^/books/(\d+)/content$#', $path, $m) && $method === 'GET') {
         current_user();
         $bookId = Validator::int($m[1]);
@@ -1575,6 +1630,28 @@ function route(string $method, string $path): void
             'original_name' => $file['original_name'],
             ...$content,
         ]);
+    }
+
+    if (preg_match('#^/books/(\d+)/page-image$#', $path, $m) && $method === 'GET') {
+        current_user();
+        $bookId = Validator::int($m[1]);
+        $page = Validator::int($_GET['page'] ?? 1, 'page');
+        $stmt = pdo()->prepare(
+            'SELECT id FROM book_files
+             WHERE book_id=:book_id AND status="active" AND file_type="pdf"
+             ORDER BY created_at DESC LIMIT 1'
+        );
+        $stmt->execute([':book_id' => $bookId]);
+        $fileId = (int)($stmt->fetchColumn() ?: 0);
+        if (!$fileId) {
+            Response::error('This book has no PDF page image to render', 404);
+        }
+        $file = stored_book_file($fileId);
+        $image = render_pdf_page_image($file['absolute_path'], $page);
+        if (!$image) {
+            Response::error('This page image could not be rendered', 422);
+        }
+        serve_image_file($image);
     }
 
     if ($method === 'GET' && $path === '/search/books') {

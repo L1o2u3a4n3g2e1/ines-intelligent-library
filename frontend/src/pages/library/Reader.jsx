@@ -34,7 +34,7 @@ export default function Reader() {
     : '';
   const narratableText = currentText || fallbackText;
   const progress = Math.min(100, Math.round((pageNumber / totalPages) * 100));
-  const viewerUrl = readableFile ? `${booksApi.fileStreamUrl(readableFile.id)}#page=${pageNumber}&view=FitH` : '';
+  const viewerUrl = readableFile?.file_type === 'pdf' ? booksApi.bookPageImageUrl(id, pageNumber) : '';
 
   useEffect(() => {
     if (initializedRef.current || progressState.loading) return;
@@ -124,7 +124,9 @@ export default function Reader() {
               <span>Page {pageNumber} of {totalPages}</span>
             </div>
             {viewerUrl ? (
-              <iframe title={`${book?.title} online viewer`} src={viewerUrl} />
+              <div className="reader-page-image-wrap">
+                <img className="reader-page-image" src={viewerUrl} alt={`${book?.title} page ${pageNumber}`} />
+              </div>
             ) : (
               <div className="state-panel">
                 <h3>No viewable document</h3>
