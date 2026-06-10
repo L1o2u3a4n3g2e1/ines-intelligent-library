@@ -127,17 +127,32 @@ class DataCollatorCTC:
         return batch
 
 
-def edit_distance(reference: list[str], hypothesis: list[str]) -> int:
-    previous = list(range(len(hypothesis) + 1))
+def edit_counts(reference: list[str], hypothesis: list[str]) -> dict[str, int]:
+    previous = [(j, 0, j, 0) for j in range(len(hypothesis) + 1)]
     for i, ref_item in enumerate(reference, start=1):
-        current = [i]
+        current = [(i, i, 0, 0)]
         for j, hyp_item in enumerate(hypothesis, start=1):
             if ref_item == hyp_item:
-                current.append(previous[j - 1])
+                cost, deletions, insertions, substitutions = previous[j - 1]
+                current.append((cost, deletions, insertions, substitutions))
             else:
-                current.append(1 + min(previous[j], current[j - 1], previous[j - 1]))
+                delete = (previous[j][0] + 1, previous[j][1] + 1, previous[j][2], previous[j][3])
+                insert = (current[j - 1][0] + 1, current[j - 1][1], current[j - 1][2] + 1, current[j - 1][3])
+                substitute = (
+                    previous[j - 1][0] + 1,
+                    previous[j - 1][1],
+                    previous[j - 1][2],
+                    previous[j - 1][3] + 1,
+                )
+                current.append(min(delete, insert, substitute, key=lambda item: item[0]))
         previous = current
-    return previous[-1]
+    cost, deletions, insertions, substitutions = previous[-1]
+    return {
+        "distance": cost,
+        "deletions": deletions,
+        "insertions": insertions,
+        "substitutions": substitutions,
+    }
 
 
 def evaluate_samples(
@@ -152,6 +167,9 @@ def evaluate_samples(
     word_total = 0
     char_errors = 0
     char_total = 0
+    word_insertions = 0
+    word_deletions = 0
+    word_substitutions = 0
     exact = 0
     examples = []
     started = time.time()
@@ -171,9 +189,14 @@ def evaluate_samples(
 
             ref_words = reference.split()
             hyp_words = prediction.split()
-            word_errors += edit_distance(ref_words, hyp_words)
+            word_counts = edit_counts(ref_words, hyp_words)
+            char_counts = edit_counts(list(reference), list(prediction))
+            word_errors += word_counts["distance"]
+            word_insertions += word_counts["insertions"]
+            word_deletions += word_counts["deletions"]
+            word_substitutions += word_counts["substitutions"]
             word_total += len(ref_words)
-            char_errors += edit_distance(list(reference), list(prediction))
+            char_errors += char_counts["distance"]
             char_total += len(reference)
             exact += int(reference == prediction)
             if len(examples) < 8:
@@ -188,12 +211,28 @@ def evaluate_samples(
     wer = word_errors / max(1, word_total)
     cer = char_errors / max(1, char_total)
     sentence_accuracy = exact / max(1, len(samples))
+    true_positives = max(0, word_total - word_deletions - word_substitutions)
+    false_positives = word_insertions + word_substitutions
+    false_negatives = word_deletions + word_substitutions
+    precision = true_positives / max(1, true_positives + false_positives)
+    recall = true_positives / max(1, true_positives + false_negatives)
+    f1 = 2 * precision * recall / max(1e-12, precision + recall)
     return {
         "samples": len(samples),
         "wer": wer,
         "cer": cer,
         "word_accuracy_percent": max(0.0, 100.0 * (1.0 - wer)),
         "sentence_exact_accuracy_percent": 100.0 * sentence_accuracy,
+        "word_precision_percent": 100.0 * precision,
+        "word_recall_percent": 100.0 * recall,
+        "word_f1_percent": 100.0 * f1,
+        "word_error_counts": {
+            "insertions": word_insertions,
+            "deletions": word_deletions,
+            "substitutions": word_substitutions,
+        },
+        "roc_auc": None,
+        "roc_auc_note": "ROC-AUC is not a primary open-vocabulary CTC speech-to-text metric; WER, CER, word F1, and sentence exact accuracy are reported instead.",
         "elapsed_seconds": round(time.time() - started, 2),
         "examples": examples,
     }

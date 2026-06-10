@@ -190,6 +190,15 @@ Metric formulas:
 - Word Accuracy: `max(0, 1 - WER) * 100`.
 - Character Error Rate: `(Character Substitutions + Insertions + Deletions) / Reference Characters`.
 - Exact Sentence Accuracy: `Correct Full Sentences / Total Sentences * 100`.
+- Word Precision: `Correct Predicted Words / All Predicted Words`.
+- Word Recall: `Correct Predicted Words / All Reference Words`.
+- Word F1: `2 * Precision * Recall / (Precision + Recall)`.
+
+ROC-AUC is not a primary metric for open-vocabulary CTC speech-to-text because
+the final task is sequence transcription, not binary classification. If needed,
+it can only be approximated by reformulating the model output as token-level
+one-vs-rest classification, but WER, CER, sentence exact accuracy, and word F1
+measure transcription quality more directly.
 
 ## Backend and frontend STT connection
 
