@@ -11,6 +11,7 @@ export function normalizeBook(book = {}) {
     publicationYear: book.publicationYear ?? book.publication_year,
     year: book.year ?? book.publication_year,
     files: book.files || [],
+    coverImage: book.coverImage || book.cover_image || '',
     coverColor: book.coverColor || '#1f6b55',
   };
 }

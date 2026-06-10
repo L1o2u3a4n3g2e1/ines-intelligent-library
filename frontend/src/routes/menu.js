@@ -26,19 +26,17 @@ export const menus = {
   [ROLES.STUDENT]: [
     { label: 'Dashboard', path: '/student/dashboard', icon: Home },
     { label: 'Search Books', path: '/search', icon: BookOpen },
-    { label: 'My Private Books', path: '/my-library', icon: BookMarked },
+    { label: 'Upload Book', path: '/student/submissions', icon: Upload },
     { label: 'My Borrowed Books', path: '/student/borrowed', icon: LibraryBig },
     { label: 'Reading Progress', path: '/student/progress', icon: ListChecks },
     { label: 'Favorites', path: '/student/favorites', icon: Heart },
     { label: 'Bookmarks', path: '/student/bookmarks', icon: Bookmark },
-    { label: 'Submit a Book', path: '/student/submissions', icon: Upload },
     { label: 'Recommendations', path: '/recommendations', icon: Star },
     { label: 'Notifications', path: '/notifications', icon: Bell },
   ],
   [ROLES.LECTURER]: [
     { label: 'Dashboard', path: '/lecturer/dashboard', icon: Home },
     { label: 'Search Books', path: '/search', icon: BookOpen },
-    { label: 'My Private Books', path: '/my-library', icon: BookMarked },
     { label: 'Reading Lists', path: '/lecturer/reading-lists', icon: BookMarked },
     { label: 'Upload Books', path: '/lecturer/uploads', icon: Upload },
     { label: 'Course Resources', path: '/lecturer/resources', icon: GraduationCap },
@@ -47,7 +45,6 @@ export const menus = {
   ],
   [ROLES.LIBRARIAN_ADMIN]: [
     { label: 'Dashboard', path: '/admin/dashboard', icon: Home },
-    { label: 'My Private Books', path: '/my-library', icon: BookMarked },
     { label: 'Users', path: '/admin/users', icon: Users },
     { label: 'Books', path: '/admin/books', icon: LibraryBig },
     { label: 'Verify Submissions', path: '/admin/book-submissions', icon: FileCheck2 },

@@ -11,6 +11,7 @@ if (is_file($autoload)) {
 require __DIR__ . '/config/cors.php';
 require __DIR__ . '/helpers/response.php';
 require __DIR__ . '/helpers/Database.php';
+require __DIR__ . '/helpers/BookCover.php';
 require __DIR__ . '/helpers/Request.php';
 require __DIR__ . '/helpers/Validator.php';
 require __DIR__ . '/services/ActivityLogService.php';

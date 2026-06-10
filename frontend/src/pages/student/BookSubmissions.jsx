@@ -1,5 +1,6 @@
-import { Download, Send } from 'lucide-react';
+import { Download, Headphones, Send } from 'lucide-react';
 import { useState } from 'react';
+import { Link } from 'react-router-dom';
 import * as submissionsApi from '../../api/bookSubmissions.js';
 import Button from '../../components/Button.jsx';
 import Card from '../../components/Card.jsx';
@@ -56,8 +57,8 @@ export default function BookSubmissions() {
   return (
     <>
       <PageHeader
-        title="Submit a book"
-        description="Upload a book for the library. It stays private until a librarian verifies and approves it."
+        title="Upload book"
+        description="Upload a book for the library catalog. It becomes searchable and readable after a librarian verifies and approves it."
       />
       {message && <div className="inline-info">{message}</div>}
       {error && <div className="inline-error" role="alert">{error}</div>}
@@ -97,6 +98,16 @@ export default function BookSubmissions() {
               { key: 'status', label: 'Status', render: (row) => <span className={`status-pill status-${row.status}`}>{row.status}</span> },
               { key: 'submittedAt', label: 'Submitted' },
               { key: 'decision', label: 'Librarian note' },
+              {
+                key: 'catalog',
+                label: 'Catalog',
+                render: (row) => row.approved_book_id ? (
+                  <div className="button-row table-actions">
+                    <Link className="button button-secondary button-sm" to={`/books/${row.approved_book_id}`}>View</Link>
+                    <Link className="button button-ghost button-sm" to={`/reader/${row.approved_book_id}`}><Headphones size={15} /> Read & listen</Link>
+                  </div>
+                ) : <span className="muted-text">Pending approval</span>,
+              },
               {
                 key: 'download',
                 label: 'File',

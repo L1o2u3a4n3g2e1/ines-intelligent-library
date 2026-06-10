@@ -1072,6 +1072,7 @@ function route(string $method, string $path): void
                 ':created_by' => $submission['submitted_by'],
             ]);
             $bookId = (int)$db->lastInsertId();
+            ensure_generated_book_cover($db, $bookId);
 
             $fileStmt = $db->prepare(
                 'INSERT INTO book_files

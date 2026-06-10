@@ -1,4 +1,4 @@
-import { apiRequest, asQuery } from './client.js';
+import { API_BASE_URL, apiRequest, asQuery } from './client.js';
 import { normalizeBook } from './normalizers.js';
 
 export function listBooks(params = {}) {
@@ -47,4 +47,10 @@ export function fileStreamUrl(fileId) {
   const token = localStorage.getItem('ines_token') || '';
   const query = token ? `?token=${encodeURIComponent(token)}` : '';
   return `${import.meta.env.VITE_API_BASE_URL || 'http://localhost/digital-library/backend'}/book-files/${fileId}/stream${query}`;
+}
+
+export function assetUrl(path) {
+  if (!path) return '';
+  if (/^https?:\/\//i.test(path)) return path;
+  return `${API_BASE_URL}/${String(path).replace(/^\/+/, '')}`;
 }

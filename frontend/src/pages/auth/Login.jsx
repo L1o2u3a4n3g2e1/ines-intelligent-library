@@ -36,7 +36,7 @@ export default function Login() {
           <img className="login-logo" src="/ines-logo.png" alt="INES-Ruhengeri logo" />
           <p className="eyebrow">INES-Ruhengeri</p>
           <h1>Welcome to INES Digital Library</h1>
-          <p>Discover academic resources, explore faculty collections, upload private books, and listen with intelligent English narration.</p>
+          <p>Discover academic resources, explore faculty collections, submit books for approval, and listen with intelligent English narration.</p>
         </div>
       </section>
       <section className="auth-panel login-panel">

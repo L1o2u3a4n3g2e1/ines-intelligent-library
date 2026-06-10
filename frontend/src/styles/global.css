@@ -220,7 +220,8 @@ p { color: var(--muted); line-height: 1.55; }
 
 .book-grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(270px, 1fr)); gap: 16px; }
 .book-card { background: var(--surface); border: 1px solid var(--line); border-radius: var(--radius); overflow: hidden; display: grid; grid-template-columns: 96px 1fr; min-height: 210px; }
-.book-cover { color: #fff; display: grid; place-items: center; min-height: 100%; font-weight: 900; font-size: 1.35rem; }
+.book-cover { color: #fff; display: grid; place-items: center; min-height: 100%; font-weight: 900; font-size: 1.35rem; overflow: hidden; }
+.book-cover img { width: 100%; height: 100%; object-fit: cover; display: block; }
 .hero-cover { height: 340px; border-radius: var(--radius); }
 .book-body { padding: 15px; display: flex; flex-direction: column; justify-content: space-between; gap: 14px; }
 .book-meta { display: flex; gap: 8px; flex-wrap: wrap; color: var(--muted); font-size: 0.8rem; }
@@ -241,6 +242,7 @@ label { min-width: 0; display: grid; gap: 7px; font-weight: 700; color: var(--in
 .inline-error { background: #fff1f2; color: #9f1239; border: 1px solid #fecdd3; }
 .inline-note { background: #f0fdf4; color: var(--green); border: 1px solid #bbf7d0; }
 .inline-info, .mock-banner { background: #eef7ff; color: #075985; border: 1px solid #bae6fd; }
+.muted-text { color: var(--muted); font-size: 0.88rem; }
 .status-pill {
   display: inline-flex;
   align-items: center;
@@ -285,6 +287,8 @@ th { color: var(--muted); font-size: 0.78rem; text-transform: uppercase; letter-
 .reader-status { display: flex; justify-content: space-between; gap: 14px; color: var(--muted); }
 .reader-options { display: flex; justify-content: center; margin: 14px 0; }
 .reader-options label { width: min(220px, 100%); text-align: left; }
+.reader-viewer { margin-top: 22px; text-align: left; }
+.reader-viewer iframe { width: 100%; height: min(68vh, 720px); border: 1px solid var(--line); border-radius: var(--radius); background: var(--surface-2); }
 .book-audio-list { display: grid; gap: 12px; margin-top: 22px; text-align: left; }
 .book-audio { display: grid; gap: 8px; padding: 13px; background: var(--surface-2); border: 1px solid var(--line); border-radius: var(--radius); }
 .book-audio audio { width: 100%; }

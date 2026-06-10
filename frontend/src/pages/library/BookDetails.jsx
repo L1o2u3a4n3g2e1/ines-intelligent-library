@@ -36,7 +36,9 @@ export default function BookDetails() {
       {message && <div className="inline-info">{message}</div>}
       {error && <div className="inline-error" role="alert">{error}</div>}
       <section className="details-layout">
-        <div className="book-cover hero-cover" style={{ background: book?.coverColor }}><span>{book?.title?.slice(0, 2).toUpperCase()}</span></div>
+        <div className="book-cover hero-cover" style={{ background: book?.coverColor }}>
+          {book?.coverImage ? <img src={booksApi.assetUrl(book.coverImage)} alt={`${book.title} cover`} /> : <span>{book?.title?.slice(0, 2).toUpperCase()}</span>}
+        </div>
         <Card title="Book information">
           <div className="detail-grid">
             <span>Author</span><strong>{book?.author}</strong>
@@ -48,10 +50,13 @@ export default function BookDetails() {
             <span>Availability</span><strong>{book?.availableCopies} / {book?.totalCopies}</strong>
           </div>
           <div className="button-row">
-            {user.role === 'student' && <Button onClick={() => runAction(() => borrowApi.requestBorrow(book.id), 'Borrow request sent.')}>Borrow / Request</Button>}
+            {user.role === 'student' && <Button onClick={() => runAction(() => borrowApi.requestBorrow(book.id), 'Borrow request sent to the librarian.')}>Request digital borrow</Button>}
             {user.role === 'student' && <Button variant="secondary" onClick={() => runAction(() => favoritesApi.toggleFavorite(book.id), 'Favorites updated.')}>Favorite</Button>}
-            <Link className="button button-ghost button-md" to={`/reader/${book?.id}`}><Headphones size={16} /> Listen</Link>
+            <Link className="button button-ghost button-md" to={`/reader/${book?.id}`}><Headphones size={16} /> Read & listen</Link>
           </div>
+        </Card>
+        <Card title="Borrowing guidance" eyebrow="Digital access">
+          <p>Requesting a borrow sends the book to a librarian for approval. When approved, it appears in your borrowed books with a due date; you can read online, listen with English narration, renew if allowed, or return it when finished.</p>
         </Card>
         <Card title="Book files">
           {book?.files?.length ? (

@@ -60,6 +60,7 @@ export default function Reader() {
   const currentSection = readableSections[sectionIndex] || '';
   const progress = readableSections.length ? Math.round(((sectionIndex + 1) / readableSections.length) * 100) : 0;
   const audioFiles = (book?.files || []).filter((file) => file.file_type === 'audio');
+  const readableFile = (book?.files || []).find((file) => ['pdf', 'document', 'text'].includes(file.file_type));
 
   useEffect(() => {
     if (initializedRef.current || contentState.loading || progressState.loading || !readableSections.length) return;
@@ -154,7 +155,7 @@ export default function Reader() {
           </div>
           {!sections.length && fallbackSection && (
             <div className="inline-note">
-              Full text could not be extracted from this PDF. Audio narration is using the catalog summary.
+              Full text could not be extracted from this file. Audio narration is using the catalog summary, and the original book can still be viewed below.
             </div>
           )}
           <div className="progress-track"><span style={{ width: `${progress}%` }} /></div>
@@ -199,6 +200,12 @@ export default function Reader() {
                   <audio controls preload="metadata" src={booksApi.fileStreamUrl(file.id)}>Your browser does not support audio playback.</audio>
                 </div>
               ))}
+            </div>
+          )}
+          {readableFile?.file_type === 'pdf' && (
+            <div className="reader-viewer">
+              <h3>View book</h3>
+              <iframe title={`${book?.title} PDF viewer`} src={booksApi.fileStreamUrl(readableFile.id)} />
             </div>
           )}
           {book?.files?.length > 0 && (

@@ -38,7 +38,7 @@ export default function PersonalLibraryPanel({ compact = false }) {
   }
 
   async function remove(book) {
-    if (!window.confirm(`Permanently delete "${book.title}" from your private library?`)) return;
+    if (!window.confirm(`Permanently delete "${book.title}" from your personal reading shelf?`)) return;
     setMessage('');
     setError('');
     try {
@@ -55,7 +55,7 @@ export default function PersonalLibraryPanel({ compact = false }) {
       {message && <div className="inline-info">{message}</div>}
       {error && <div className="inline-error" role="alert">{error}</div>}
       <div className="personal-library-layout">
-        <Card title="Upload an English book" eyebrow="Private to your account">
+        <Card title="Upload an English book" eyebrow="Personal reading shelf">
           <form className="form-stack" onSubmit={upload}>
             <label>Title<input value={form.title} onChange={(event) => setForm({ ...form, title: event.target.value })} required /></label>
             <label>Author<input value={form.author} onChange={(event) => setForm({ ...form, author: event.target.value })} /></label>
@@ -63,11 +63,11 @@ export default function PersonalLibraryPanel({ compact = false }) {
             <label>Book file
               <input key={fileKey} type="file" accept=".pdf,.docx,.txt" onChange={(event) => setFile(event.target.files?.[0] || null)} required />
             </label>
-            <p className="file-hint">PDF, Word, or TXT. Word files are converted to PDF automatically. Your upload is not added to the public catalog.</p>
+            <p className="file-hint">PDF, Word, or TXT. Word files are converted to PDF automatically. For the public catalog, use Upload Book from the student menu.</p>
             <Button type="submit" disabled={busy || !file}><Upload size={16} /> {busy ? 'Uploading...' : 'Add to my library'}</Button>
           </form>
         </Card>
-        <Card title="My private books" eyebrow={`${books.data?.length || 0} saved`}>
+        <Card title="My saved reading files" eyebrow={`${books.data?.length || 0} saved`}>
           <DataState loading={books.loading} error={books.error} empty={!books.data?.length} onRetry={books.reload}>
             <div className="personal-book-list">
               {(books.data || []).map((book) => (
