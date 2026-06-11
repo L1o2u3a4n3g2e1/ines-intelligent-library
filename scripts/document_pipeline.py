@@ -74,15 +74,25 @@ def extract_page_text(path: Path, page_number: int) -> dict[str, object]:
         raise ValueError("Page number must be 1 or higher")
 
     if extension == ".pdf":
-        from PyPDF2 import PdfReader
+        import fitz
 
-        reader = PdfReader(str(path))
-        total_pages = len(reader.pages)
-        if total_pages < 1:
-            raise ValueError("The PDF does not contain pages")
-        page_number = min(page_number, total_pages)
-        text = (reader.pages[page_number - 1].extract_text() or "").strip()
-        return {"text": text, "page": page_number, "total_pages": total_pages}
+        document = fitz.open(path)
+        try:
+            total_pages = document.page_count
+            if total_pages < 1:
+                raise ValueError("The PDF does not contain pages")
+            page_number = min(page_number, total_pages)
+            page = document.load_page(page_number - 1)
+            text = page.get_text("text").strip()
+            has_visual_content = bool(text or page.get_images(full=True) or page.get_drawings())
+            return {
+                "text": text,
+                "page": page_number,
+                "total_pages": total_pages,
+                "is_blank": not has_visual_content,
+            }
+        finally:
+            document.close()
 
     if extension in {".txt", ".docx"}:
         text = extract_text(path)
@@ -90,7 +100,8 @@ def extract_page_text(path: Path, page_number: int) -> dict[str, object]:
         pages = [text[index : index + chunk_size] for index in range(0, len(text), chunk_size)] or [""]
         total_pages = len(pages)
         page_number = min(page_number, total_pages)
-        return {"text": pages[page_number - 1].strip(), "page": page_number, "total_pages": total_pages}
+        text = pages[page_number - 1].strip()
+        return {"text": text, "page": page_number, "total_pages": total_pages, "is_blank": text == ""}
 
     raise ValueError(f"Page extraction is not supported for {extension or 'this file type'}")
 
@@ -203,6 +214,7 @@ def main() -> int:
             "truncated": len(normalized) > args.max_chars,
             "page": page["page"],
             "total_pages": page["total_pages"],
+            "is_blank": bool(page.get("is_blank", False)),
         }
 
     print(json.dumps(result, ensure_ascii=False))

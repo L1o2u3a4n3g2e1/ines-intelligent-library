@@ -346,14 +346,17 @@ function extract_document_page_text(string $path, int $page = 1, int $maxChars =
     if (is_file($sidecar) && is_file($metaSidecar)) {
         $text = trim((string)file_get_contents($sidecar));
         $meta = json_decode((string)file_get_contents($metaSidecar), true) ?: [];
-        return [
-            'text' => mb_substr($text, 0, $maxChars),
-            'characters' => mb_strlen($text),
-            'truncated' => mb_strlen($text) > $maxChars,
-            'page' => (int)($meta['page'] ?? $page),
-            'total_pages' => (int)($meta['total_pages'] ?? $page),
-            'cached' => true,
-        ];
+        if (array_key_exists('is_blank', $meta)) {
+            return [
+                'text' => mb_substr($text, 0, $maxChars),
+                'characters' => mb_strlen($text),
+                'truncated' => mb_strlen($text) > $maxChars,
+                'page' => (int)($meta['page'] ?? $page),
+                'total_pages' => (int)($meta['total_pages'] ?? $page),
+                'is_blank' => (bool)$meta['is_blank'],
+                'cached' => true,
+            ];
+        }
     }
 
     $pythonScript = realpath(__DIR__ . '/../../scripts/document_pipeline.py');
@@ -370,10 +373,12 @@ function extract_document_page_text(string $path, int $page = 1, int $maxChars =
     $text = trim((string)($result['text'] ?? ''));
     $actualPage = (int)($result['page'] ?? $page);
     $totalPages = max(1, (int)($result['total_pages'] ?? $actualPage));
+    $isBlank = (bool)($result['is_blank'] ?? false);
     @file_put_contents($sidecar, $text);
     @file_put_contents($metaSidecar, json_encode([
         'page' => $actualPage,
         'total_pages' => $totalPages,
+        'is_blank' => $isBlank,
     ]));
 
     return [
@@ -382,6 +387,7 @@ function extract_document_page_text(string $path, int $page = 1, int $maxChars =
         'truncated' => (bool)($result['truncated'] ?? false),
         'page' => $actualPage,
         'total_pages' => $totalPages,
+        'is_blank' => $isBlank,
         'cached' => false,
     ];
 }

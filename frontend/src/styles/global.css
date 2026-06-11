@@ -413,6 +413,20 @@ th { color: var(--muted); font-size: 0.78rem; text-transform: uppercase; letter-
   background: linear-gradient(135deg, #0d3329, #1f6b55);
 }
 .reader-book-toolbar span { color: rgba(255,255,255,0.78); font-weight: 700; }
+.reader-book-navigation { display: flex; align-items: center; gap: 9px; }
+.reader-book-navigation button {
+  width: 34px;
+  height: 34px;
+  display: grid;
+  place-items: center;
+  color: #fff;
+  background: rgba(255,255,255,0.12);
+  border: 1px solid rgba(255,255,255,0.2);
+  border-radius: 10px;
+  cursor: pointer;
+}
+.reader-book-navigation button:hover:not(:disabled) { background: rgba(255,255,255,0.22); }
+.reader-book-navigation button:disabled { opacity: 0.4; cursor: not-allowed; }
 .reader-listen-pane {
   position: sticky;
   top: 94px;

@@ -16,6 +16,9 @@ export default function Reader() {
   const [speechState, setSpeechState] = useState('idle');
   const [speechError, setSpeechError] = useState('');
   const [rate, setRate] = useState(1);
+  const [navigationBusy, setNavigationBusy] = useState(false);
+  const [preparedAudioUrl, setPreparedAudioUrl] = useState('');
+  const [audioPreparing, setAudioPreparing] = useState(false);
   const initializedRef = useRef(false);
   const audioRef = useRef(null);
   const startedAtRef = useRef(0);
@@ -44,6 +47,30 @@ export default function Reader() {
   }, [progressState.loading, progressState.data]);
 
   useEffect(() => () => audioRef.current?.pause(), []);
+
+  useEffect(() => {
+    if (pageState.loading || !narratableText) {
+      setPreparedAudioUrl('');
+      setAudioPreparing(false);
+      return undefined;
+    }
+    let active = true;
+    setPreparedAudioUrl('');
+    setAudioPreparing(true);
+    ttsApi.synthesize({ book_id: Number(id), text: narratableText, language: 'en' })
+      .then((response) => {
+        if (active) setPreparedAudioUrl(ttsApi.audioUrl(response.data.audio_url));
+      })
+      .catch((error) => {
+        if (active) setSpeechError(error.message);
+      })
+      .finally(() => {
+        if (active) setAudioPreparing(false);
+      });
+    return () => {
+      active = false;
+    };
+  }, [id, pageNumber, narratableText, pageState.loading]);
 
   async function saveProgress(nextPage = pageNumber, readingSeconds = 0) {
     const percentage = Math.min(100, Math.round((nextPage / totalPages) * 100));
@@ -77,8 +104,13 @@ export default function Reader() {
     }
     try {
       setSpeechState('loading');
-      const response = await ttsApi.synthesize({ book_id: Number(id), text: narratableText, language: 'en' });
-      audioRef.current.src = ttsApi.audioUrl(response.data.audio_url);
+      let audioUrl = preparedAudioUrl;
+      if (!audioUrl) {
+        const response = await ttsApi.synthesize({ book_id: Number(id), text: narratableText, language: 'en' });
+        audioUrl = ttsApi.audioUrl(response.data.audio_url);
+        setPreparedAudioUrl(audioUrl);
+      }
+      audioRef.current.src = audioUrl;
       audioRef.current.playbackRate = rate;
       startedAtRef.current = Date.now();
       await audioRef.current.play();
@@ -101,6 +133,28 @@ export default function Reader() {
     await saveProgress(bounded);
   }
 
+  async function moveToAdjacentPage(direction) {
+    if (navigationBusy) return;
+    stopSpeech();
+    setNavigationBusy(true);
+    try {
+      let candidate = pageNumber + direction;
+      let selected = Math.min(Math.max(candidate, 1), totalPages);
+      for (let checked = 0; checked < 12 && candidate >= 1 && candidate <= totalPages; checked += 1) {
+        const response = await booksApi.getBookPage(id, candidate);
+        selected = candidate;
+        if (!response.data?.is_blank) break;
+        candidate += direction;
+      }
+      setPageNumber(selected);
+      await saveProgress(selected);
+    } catch (error) {
+      setSpeechError(error.message);
+    } finally {
+      setNavigationBusy(false);
+    }
+  }
+
   async function resetProgress() {
     stopSpeech();
     setPageNumber(1);
@@ -121,7 +175,11 @@ export default function Reader() {
           <section className="reader-book-pane">
             <div className="reader-book-toolbar">
               <strong>{book?.title}</strong>
-              <span>Page {pageNumber} of {totalPages}</span>
+              <div className="reader-book-navigation">
+                <button type="button" aria-label="Previous page" disabled={pageNumber === 1 || navigationBusy} onClick={() => moveToAdjacentPage(-1)}><SkipBack size={17} /></button>
+                <span>Page {pageNumber} of {totalPages}</span>
+                <button type="button" aria-label="Next page" disabled={pageNumber >= totalPages || navigationBusy} onClick={() => moveToAdjacentPage(1)}><SkipForward size={17} /></button>
+              </div>
             </div>
             {viewerUrl ? (
               <div className="reader-page-image-wrap">
@@ -148,6 +206,7 @@ export default function Reader() {
                 This page is mostly cover art or scanned content. You can still view it; narration will use the catalog summary, or open the next page for book text.
               </div>
             )}
+            {audioPreparing && <div className="inline-info">Preparing this page's gTTS narration in the background...</div>}
             <div className="reader-status">
               <strong>Page {pageNumber} narration</strong>
               <span>{progress}% completed</span>
@@ -178,11 +237,11 @@ export default function Reader() {
               onError={() => setSpeechState('idle')}
             />
             <div className="button-row centered">
-              <Button variant="ghost" size="icon" aria-label="Previous page" disabled={pageNumber === 1} onClick={() => moveToPage(pageNumber - 1)}><SkipBack size={18} /></Button>
+              <Button variant="ghost" size="icon" aria-label="Previous narrated page" disabled={pageNumber === 1 || navigationBusy} onClick={() => moveToAdjacentPage(-1)}><SkipBack size={18} /></Button>
               <Button size="icon" aria-label={speechState === 'paused' ? 'Resume narration' : 'Play page narration'} onClick={speak} disabled={pageState.loading || !narratableText || ['playing', 'loading'].includes(speechState)}><Play size={18} /></Button>
               <Button variant="secondary" size="icon" aria-label="Pause narration" onClick={pause} disabled={speechState !== 'playing'}><Pause size={18} /></Button>
               <Button variant="ghost" size="icon" aria-label="Stop narration" onClick={stopSpeech} disabled={speechState === 'idle'}><Square size={18} /></Button>
-              <Button variant="ghost" size="icon" aria-label="Next page" disabled={pageNumber >= totalPages} onClick={() => moveToPage(pageNumber + 1)}><SkipForward size={18} /></Button>
+              <Button variant="ghost" size="icon" aria-label="Next narrated page" disabled={pageNumber >= totalPages || navigationBusy} onClick={() => moveToAdjacentPage(1)}><SkipForward size={18} /></Button>
               <Button variant="ghost" size="icon" aria-label="Reset progress" onClick={resetProgress}><RotateCcw size={18} /></Button>
             </div>
             <form className="reader-page-jump" onSubmit={(event) => {
@@ -190,7 +249,7 @@ export default function Reader() {
               const value = Number(new FormData(event.currentTarget).get('page'));
               moveToPage(value || 1);
             }}>
-              <label>Go to page<input name="page" type="number" min="1" max={totalPages} defaultValue={pageNumber} /></label>
+              <label>Go to page<input key={pageNumber} name="page" type="number" min="1" max={totalPages} defaultValue={pageNumber} /></label>
               <Button type="submit" variant="secondary">Open</Button>
             </form>
             {audioFiles.length > 0 && (
