@@ -386,9 +386,12 @@ def train(args: argparse.Namespace) -> dict:
     losses = []
     deadline = started + (args.time_budget_minutes * 60)
     step = 0
-    epoch = 0
+    epochs_started = 0
+    epochs_completed = 0
+    training_examples_processed = 0
     while step < args.max_steps and time.time() < deadline:
-        epoch += 1
+        epochs_started += 1
+        batches_processed_this_epoch = 0
         for batch in loader:
             if step >= args.max_steps or time.time() >= deadline:
                 break
@@ -406,8 +409,12 @@ def train(args: argparse.Namespace) -> dict:
             loss.backward()
             optimizer.step()
             step += 1
+            batches_processed_this_epoch += 1
+            training_examples_processed += int(batch["input_values"].shape[0])
             losses.append(float(loss.detach().cpu()))
             print(json.dumps({"event": "train_step", "step": step, "loss": losses[-1]}, ensure_ascii=False), flush=True)
+        if batches_processed_this_epoch == len(loader):
+            epochs_completed += 1
 
     output_dir = Path(args.output_dir)
     output_dir.mkdir(parents=True, exist_ok=True)
@@ -443,8 +450,15 @@ def train(args: argparse.Namespace) -> dict:
         "train_manifest": [display_path(path) for path in train_manifests],
         "dev_manifest": display_path(args.dev_manifest),
         "test_manifest": display_path(args.test_manifest),
-        "epochs_completed": epoch,
+        "epochs_started": epochs_started,
+        "epochs_completed": epochs_completed,
+        "effective_epochs": training_examples_processed / len(train_samples),
         "optimizer_steps": step,
+        "training_examples_processed": training_examples_processed,
+        "learning_rate": args.learning_rate,
+        "batch_size": args.batch_size,
+        "max_steps": args.max_steps,
+        "time_budget_minutes": args.time_budget_minutes,
         "train_mode": args.train_mode,
         "trainable_parameters": trainable,
         "total_parameters": total,

@@ -140,7 +140,7 @@ VALUES
   ('max_borrowed_books', '5', 'number', 'Maximum active borrowed books per user', 0),
   ('allowed_upload_types', 'pdf,docx,txt,jpg,png', 'string', 'Allowed uploaded file types', 0),
   ('upload_size_limit_mb', '25', 'number', 'Maximum upload size in MB', 0),
-  ('stt_service_url', 'http://127.0.0.1:5003/api/stt/transcribe?mode=open', 'string', 'Python open-vocabulary STT gateway URL', 0),
+  ('stt_service_url', 'http://127.0.0.1:5006/api/stt/transcribe', 'string', 'Primary local Wav2Vec2 STT service URL', 0),
   ('tts_engine', 'gTTS 2.5.1 via scripts/gtts_synthesize.py', 'string', 'Backend English narration engine', 0)
 ON DUPLICATE KEY UPDATE setting_value = VALUES(setting_value), description = VALUES(description);
 

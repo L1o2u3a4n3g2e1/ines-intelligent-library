@@ -3,6 +3,7 @@ import { useEffect, useRef, useState } from 'react';
 import { useSearchParams } from 'react-router-dom';
 import * as academicApi from '../../api/academic.js';
 import * as bookmarksApi from '../../api/bookmarks.js';
+import * as booksApi from '../../api/books.js';
 import * as borrowApi from '../../api/borrow.js';
 import * as favoritesApi from '../../api/favorites.js';
 import * as searchApi from '../../api/search.js';
@@ -70,6 +71,17 @@ export default function SearchBooks() {
       setToast('Bookmark saved.');
     } catch (error) {
       setToast(error.message);
+    }
+  }
+
+  async function handleDelete(book) {
+    if (!window.confirm(`Delete "${book.title}" from the public catalogue? Existing activity history will be preserved.`)) return;
+    try {
+      await booksApi.deleteBook(book.id);
+      setToast(`"${book.title}" was removed from the catalogue.`);
+      results.reload();
+    } catch (err) {
+      setToast(err.message);
     }
   }
 
@@ -267,6 +279,7 @@ export default function SearchBooks() {
             onBorrow={user.role === 'student' ? handleBorrow : undefined}
             onFavorite={user.role === 'student' ? handleFavorite : undefined}
             onBookmark={user.role !== 'librarian_admin' ? handleBookmark : undefined}
+            onDelete={user.role === 'librarian_admin' ? handleDelete : undefined}
           />
         ))}</div> : (
           <div className="state-panel">

@@ -15,11 +15,9 @@ npm run start:ai
 This starts:
 
 - Whisper fallback: `scripts/whisper_stt_service.py` on port `5001`;
-- Python AI gateway: `backend/python/main.py` on port `5003`;
 - Transformer STT: `scripts/transformer_speech_service.py` on port `5006`.
 
-Ports `5004` and `5005` were used by retired LSTM experiments and are no longer
-part of the active system.
+Ports `5003`, `5004`, and `5005` are not part of the active system.
 
 ## Active model
 
@@ -39,11 +37,11 @@ with a CPU-bounded real LibriSpeech run.
 Current metric report: `models/stt/transformer_metrics.json`.
 
 - Dataset: real LibriSpeech local manifest audio.
-- Training: 48 `train-clean-100` samples, 8 optimizer steps, head-only tuning.
-- Evaluation: 12 `dev-clean` samples and 20 `test-clean` samples.
-- Aggregate word accuracy: 89.32%.
-- Aggregate exact sentence accuracy: 50.83%.
-- Aggregate WER: 10.68%.
+- Training subset: 640 `train-clean-100` samples, with 120 optimizer steps and head-only tuning.
+- Evaluation: 40 `dev-clean` samples and 60 `test-clean` samples.
+- Aggregate word accuracy: 90.88%.
+- Aggregate exact sentence accuracy: 58.33%.
+- Aggregate WER: 9.12%.
 
 The retired Wav2Vec2 + BiLSTM adapter score is not used by the app anymore.
 

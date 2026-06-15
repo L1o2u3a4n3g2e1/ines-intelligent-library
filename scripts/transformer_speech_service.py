@@ -6,6 +6,8 @@ import tempfile
 from pathlib import Path
 
 import librosa
+import numpy as np
+import soundfile as sf
 import torch
 import uvicorn
 from fastapi import FastAPI, File, HTTPException, UploadFile
@@ -34,6 +36,16 @@ MODEL_SOURCE = resolve_model_source()
 processor = Wav2Vec2Processor.from_pretrained(MODEL_SOURCE)
 model = Wav2Vec2ForCTC.from_pretrained(MODEL_SOURCE)
 model.eval()
+
+
+def warmup_model() -> None:
+    sample = np.zeros(16000, dtype=np.float32)
+    inputs = processor(sample, sampling_rate=16000, return_tensors="pt")
+    with torch.inference_mode():
+        model(**inputs)
+
+
+warmup_model()
 
 
 def normalize_browser_audio(source: Path, target: Path) -> None:
@@ -110,7 +122,11 @@ async def transcribe(audio: UploadFile = File(None), file: UploadFile = File(Non
         source.write_bytes(payload)
         try:
             normalize_browser_audio(source, normalized)
-            audio_data, _ = librosa.load(str(normalized), sr=16000, mono=True)
+            audio_data, sample_rate = sf.read(str(normalized), dtype="float32")
+            if sample_rate != 16000:
+                audio_data = librosa.resample(audio_data, orig_sr=sample_rate, target_sr=16000)
+            if audio_data.ndim > 1:
+                audio_data = audio_data.mean(axis=1)
             inputs = processor(audio_data, sampling_rate=16000, return_tensors="pt")
             with torch.inference_mode():
                 logits = model(**inputs).logits

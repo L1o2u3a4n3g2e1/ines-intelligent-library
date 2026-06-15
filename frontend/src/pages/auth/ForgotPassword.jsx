@@ -14,9 +14,10 @@ export default function ForgotPassword() {
     event.preventDefault();
     setLoading(true);
     setError('');
+    setMessage('');
     setResetUrl('');
     try {
-      const response = await authApi.forgotPassword(email);
+      const response = await authApi.forgotPassword(email.trim().toLowerCase());
       setMessage(response.message || 'If the account exists, reset instructions were created.');
       setResetUrl(response.data?.reset_url || '');
     } catch (requestError) {
@@ -46,10 +47,19 @@ export default function ForgotPassword() {
         {message && <div className="inline-info">{message}</div>}
         {error && <div className="inline-error" role="alert">{error}</div>}
         <form className="form-stack" onSubmit={handleSubmit}>
-          <label>Email<input type="email" value={email} onChange={(e) => setEmail(e.target.value)} required /></label>
-          <Button type="submit" disabled={loading}>{loading ? 'Creating link...' : 'Send reset link'}</Button>
+          <label>
+            Account email
+            <input type="email" autoComplete="email" placeholder="name@ines.ac.rw" value={email} onChange={(event) => setEmail(event.target.value)} required />
+          </label>
+          <Button type="submit" disabled={loading}>{loading ? 'Creating secure link...' : 'Send reset link'}</Button>
         </form>
-        {resetUrl && <Link className="button button-primary button-md reset-continue" to={resetUrl}>Continue to set a new password</Link>}
+        {resetUrl && (
+          <div className="reset-ready">
+            <strong>Development reset link</strong>
+            <span>Email delivery is not configured in this local installation, so continue securely here.</span>
+            <Link className="button button-primary button-md reset-continue" to={resetUrl}>Continue to set a new password</Link>
+          </div>
+        )}
         <div className="auth-links"><Link to="/login">Back to login</Link></div>
       </section>
     </main>

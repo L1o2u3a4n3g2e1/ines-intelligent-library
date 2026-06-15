@@ -14,13 +14,6 @@ $services = @(
         Error = 'whisper-stt.err.log'
     },
     @{
-        Name = 'Python AI Backend'
-        Port = 5003
-        Script = 'backend\python\main.py'
-        Output = 'python-ai-backend.out.log'
-        Error = 'python-ai-backend.err.log'
-    },
-    @{
         Name = 'Transformer STT'
         Port = 5006
         Script = 'scripts\transformer_speech_service.py'

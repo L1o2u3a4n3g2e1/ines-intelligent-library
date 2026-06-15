@@ -24,7 +24,7 @@ export default function DataState({ loading, error, empty, onRetry, children }) 
     return (
       <div className="state-panel">
         <h3>No records yet</h3>
-        <p>Once the backend has data, this section will fill automatically.</p>
+        <p>New records will appear here when they become available.</p>
       </div>
     );
   }

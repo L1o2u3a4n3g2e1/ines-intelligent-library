@@ -1,8 +1,7 @@
 import { Mic, Search, Square } from 'lucide-react';
-import { useRef, useState } from 'react';
+import { useEffect, useRef, useState } from 'react';
 import { useNavigate } from 'react-router-dom';
 import * as voiceApi from '../../api/voiceSearch.js';
-import AIModelStatus from '../../components/AIModelStatus.jsx';
 import BookCard from '../../components/BookCard.jsx';
 import Button from '../../components/Button.jsx';
 import Card from '../../components/Card.jsx';
@@ -14,11 +13,22 @@ export default function VoiceSearch() {
   const [result, setResult] = useState(null);
   const [manualTranscript, setManualTranscript] = useState('');
   const [error, setError] = useState('');
+  const [processingSeconds, setProcessingSeconds] = useState(0);
   const recorderRef = useRef(null);
   const chunksRef = useRef([]);
   const timeoutRef = useRef(null);
   const { user } = useAuth();
   const navigate = useNavigate();
+
+  useEffect(() => {
+    if (status !== 'processing') {
+      setProcessingSeconds(0);
+      return undefined;
+    }
+    const startedAt = Date.now();
+    const timer = window.setInterval(() => setProcessingSeconds(Math.floor((Date.now() - startedAt) / 1000)), 500);
+    return () => window.clearInterval(timer);
+  }, [status]);
 
   async function submitPayload(payload) {
     setStatus('processing');
@@ -85,11 +95,10 @@ export default function VoiceSearch() {
   return (
     <>
       <PageHeader title="Voice book search" description="Search the full library catalog by speaking an English title, author, topic, faculty, department, or course." />
-      <AIModelStatus />
       <Card className="voice-card">
         <div className={`voice-pad voice-${status}`}>
           <div className="voice-orb"><Mic size={36} /></div>
-          <h2>{status === 'recording' ? 'Listening...' : status === 'processing' ? 'Processing audio...' : 'Ready to listen'}</h2>
+          <h2>{status === 'recording' ? 'Listening...' : status === 'processing' ? `Processing audio... ${processingSeconds}s` : 'Ready to listen'}</h2>
           <p>Press start, speak a book title or subject clearly, then stop. The recording also stops automatically after 5 seconds.</p>
           {error && <div className="inline-error">{error}</div>}
           <div className="button-row centered">
@@ -111,6 +120,8 @@ export default function VoiceSearch() {
             <strong>{result.transcript || 'No transcript returned'}</strong>
             {result.stt?.confidence !== undefined && <small>Confidence: {(result.stt.confidence * 100).toFixed(1)}%</small>}
             {result.stt?.model && <small>Model: {result.stt.model}</small>}
+            {result.stt?.provider && <small>Provider: {result.stt.provider.replaceAll('_', ' ')}</small>}
+            {result.stt?.processing_seconds !== undefined && <small>Processing time: {Number(result.stt.processing_seconds).toFixed(2)} seconds</small>}
           </div>
           {result.action?.type === 'navigate' && (
             <div className="button-row">

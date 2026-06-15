@@ -115,14 +115,20 @@ function local_open_vocabulary_transcribe(array $file): ?array
         return null;
     }
 
-    // Try Transformer model (PRIMARY) - port 5006
-    $transformerResult = service_upload_audio('http://127.0.0.1:5006/api/stt/transcribe', $file, 120);
+    $startedAt = microtime(true);
+    $transformerResult = service_upload_audio('http://127.0.0.1:5006/api/stt/transcribe', $file, 18);
     if ($transformerResult) {
+        $transformerResult['provider'] = 'local_wav2vec2';
+        $transformerResult['processing_seconds'] = round(microtime(true) - $startedAt, 3);
         return $transformerResult;
     }
 
-    // Try Whisper fallback (port 5001)
-    return service_upload_audio('http://127.0.0.1:5001/transcribe', $file, 90);
+    $whisperResult = service_upload_audio('http://127.0.0.1:5001/transcribe', $file, 25);
+    if ($whisperResult) {
+        $whisperResult['provider'] = 'local_whisper_fallback';
+        $whisperResult['processing_seconds'] = round(microtime(true) - $startedAt, 3);
+    }
+    return $whisperResult;
 }
 
 function admin_roles(): array
@@ -166,6 +172,19 @@ function enforce_rate_limit(string $bucket, int $limit, int $windowSeconds): voi
         flock($handle, LOCK_UN);
     } finally {
         fclose($handle);
+    }
+}
+
+function validate_new_password(string $password): void
+{
+    if (strlen($password) < 10) {
+        Response::error('Password must be at least 10 characters', 422);
+    }
+    if (!preg_match('/[a-z]/', $password)
+        || !preg_match('/[A-Z]/', $password)
+        || !preg_match('/\d/', $password)
+        || !preg_match('/[^A-Za-z0-9]/', $password)) {
+        Response::error('Password must include uppercase, lowercase, number, and symbol characters', 422);
     }
 }
 
@@ -835,6 +854,7 @@ function route(string $method, string $path): void
     }
 
     if ($method === 'POST' && $path === '/auth/forgot-password') {
+        enforce_rate_limit('forgot-password', 5, 900);
         $data = body();
         Validator::require($data, ['email']);
         Validator::email($data['email']);
@@ -866,15 +886,48 @@ function route(string $method, string $path): void
                 ];
             }
         }
-        Response::ok($response, 'If the email exists, reset instructions were created');
+        Response::ok(
+            $response,
+            $response
+                ? 'A secure reset link is ready below. It expires in 60 minutes.'
+                : 'If an active account uses that email, password reset instructions have been sent.'
+        );
+    }
+
+    if ($method === 'POST' && $path === '/auth/reset-password/validate') {
+        $data = body();
+        Validator::require($data, ['token', 'email']);
+        Validator::email($data['email']);
+        $email = strtolower(trim((string)$data['email']));
+        $stmt = pdo()->prepare(
+            'SELECT u.email, pr.expires_at
+             FROM password_resets pr
+             JOIN users u ON u.id=pr.user_id
+             WHERE pr.token_hash=:hash AND u.email=:email
+               AND pr.status="active" AND pr.used_at IS NULL
+               AND pr.expires_at > NOW() AND u.status="active"
+             LIMIT 1'
+        );
+        $stmt->execute([
+            ':hash' => hash('sha256', trim((string)$data['token'])),
+            ':email' => $email,
+        ]);
+        $reset = $stmt->fetch();
+        if (!$reset) {
+            Response::error('This reset link does not match the email account or has expired', 422);
+        }
+        Response::ok([
+            'email' => $reset['email'],
+            'expires_at' => $reset['expires_at'],
+        ], 'Reset link verified');
     }
 
     if ($method === 'POST' && $path === '/auth/reset-password') {
         $data = body();
-        Validator::require($data, ['token', 'password']);
-        if (strlen((string)$data['password']) < 8) {
-            Response::error('Password must be at least 8 characters', 422);
-        }
+        Validator::require($data, ['token', 'email', 'password']);
+        Validator::email($data['email']);
+        $email = strtolower(trim((string)$data['email']));
+        validate_new_password((string)$data['password']);
         if (isset($data['password_confirmation']) && !hash_equals((string)$data['password'], (string)$data['password_confirmation'])) {
             Response::error('Password confirmation does not match', 422);
         }
@@ -883,18 +936,22 @@ function route(string $method, string $path): void
         $db->beginTransaction();
         try {
             $stmt = $db->prepare(
-                'SELECT pr.id, pr.user_id
+                'SELECT pr.id, pr.user_id, u.email
                  FROM password_resets pr
                  JOIN users u ON u.id=pr.user_id
-                 WHERE pr.token_hash=:hash AND pr.status="active" AND pr.used_at IS NULL
+                 WHERE pr.token_hash=:hash AND u.email=:email
+                   AND pr.status="active" AND pr.used_at IS NULL
                    AND pr.expires_at > NOW() AND u.status="active"
                  LIMIT 1 FOR UPDATE'
             );
-            $stmt->execute([':hash' => hash('sha256', trim((string)$data['token']))]);
+            $stmt->execute([
+                ':hash' => hash('sha256', trim((string)$data['token'])),
+                ':email' => $email,
+            ]);
             $reset = $stmt->fetch();
             if (!$reset) {
                 $db->rollBack();
-                Response::error('This reset link is invalid or has expired', 422);
+                Response::error('This reset link does not match the email account or has expired', 422);
             }
             $db->prepare('UPDATE users SET password_hash=:password_hash, api_token_hash=NULL, token_expires_at=NULL WHERE id=:id')
                 ->execute([
@@ -919,9 +976,7 @@ function route(string $method, string $path): void
         $user = current_user();
         $data = body();
         Validator::require($data, ['current_password', 'password']);
-        if (strlen((string)$data['password']) < 8) {
-            Response::error('Password must be at least 8 characters', 422);
-        }
+        validate_new_password((string)$data['password']);
         $stmt = pdo()->prepare('SELECT password_hash FROM users WHERE id=:id');
         $stmt->execute([':id' => $user['id']]);
         $hash = $stmt->fetchColumn();
@@ -1345,7 +1400,7 @@ function route(string $method, string $path): void
     }
 
     if ($method === 'GET' && $path === '/books') {
-        $conditions = ["b.status <> 'deleted'"];
+        $conditions = ["b.status = 'active'"];
         $params = [];
         $q = trim((string)($_GET['q'] ?? ''));
         if ($q !== '') {
@@ -1386,6 +1441,98 @@ function route(string $method, string $path): void
             $book['files'] = book_files_for((int)$book['id']);
         }
         Response::ok($books);
+    }
+
+    if ($method === 'POST' && $path === '/books/upload') {
+        $user = current_user();
+        require_role($user, ['STUDENT', 'LECTURER', 'LIBRARIAN_ADMIN']);
+        Validator::require($_POST, ['title']);
+        if (!isset($_FILES['file']) || !is_uploaded_file($_FILES['file']['tmp_name'])) {
+            Response::error('Book file is required', 422);
+        }
+
+        $title = trim((string)$_POST['title']);
+        if ($title === '') {
+            Response::error('Book title is required', 422);
+        }
+        $isbn = trim((string)($_POST['isbn'] ?? '')) ?: null;
+        $total = bounded_int($_POST['total_copies'] ?? null, 1, 1, 1000000);
+        if ($isbn) {
+            $duplicate = pdo()->prepare('SELECT id FROM books WHERE isbn=:isbn AND status <> "deleted" LIMIT 1');
+            $duplicate->execute([':isbn' => $isbn]);
+            if ($duplicate->fetch()) {
+                Response::error('A catalog book already uses this ISBN', 409);
+            }
+        }
+
+        $db = pdo();
+        $asset = null;
+        $db->beginTransaction();
+        try {
+            $bookStmt = $db->prepare(
+                'INSERT INTO books
+                 (title, isbn, publisher, publication_year, description, keywords,
+                  total_copies, available_copies, status, created_by)
+                 VALUES (:title, :isbn, :publisher, :publication_year, :description, :keywords,
+                         :total_copies, :available_copies, "active", :created_by)'
+            );
+            $bookStmt->execute([
+                ':title' => $title,
+                ':isbn' => $isbn,
+                ':publisher' => trim((string)($_POST['publisher'] ?? '')) ?: null,
+                ':publication_year' => optional_int($_POST['publication_year'] ?? null, 'publication_year'),
+                ':description' => trim((string)($_POST['description'] ?? '')) ?: null,
+                ':keywords' => trim((string)($_POST['keywords'] ?? '')) ?: null,
+                ':total_copies' => $total,
+                ':available_copies' => $total,
+                ':created_by' => $user['id'],
+            ]);
+            $bookId = (int)$db->lastInsertId();
+
+            $asset = process_uploaded_library_file($_FILES['file'], 'books/' . $bookId);
+            $fileStmt = $db->prepare(
+                'INSERT INTO book_files
+                 (book_id, file_type, file_path, original_name, mime_type, file_size, uploaded_by)
+                 VALUES (:book_id, :file_type, :file_path, :original_name, :mime_type, :file_size, :uploaded_by)'
+            );
+            $fileStmt->execute([
+                ':book_id' => $bookId,
+                ':file_type' => $asset['file_type'],
+                ':file_path' => $asset['file_path'],
+                ':original_name' => $asset['original_name'],
+                ':mime_type' => $asset['mime_type'],
+                ':file_size' => $asset['file_size'],
+                ':uploaded_by' => $user['id'],
+            ]);
+            $fileId = (int)$db->lastInsertId();
+            ensure_generated_book_cover($db, $bookId);
+            $db->commit();
+        } catch (Throwable $error) {
+            if ($db->inTransaction()) {
+                $db->rollBack();
+            }
+            if ($asset && !empty($asset['absolute_path'])) {
+                @unlink($asset['absolute_path'] . '.content.txt');
+                @unlink($asset['absolute_path']);
+            }
+            throw $error;
+        }
+
+        ActivityLogService::log($user, 'upload_catalog_book', 'success', 'book', $bookId, [
+            'title' => $title,
+            'file_id' => $fileId,
+            'source_name' => $asset['source_name'],
+        ]);
+        Response::ok([
+            'id' => $bookId,
+            'file_id' => $fileId,
+            'status' => 'active',
+            'original_name' => $asset['original_name'],
+            'source_name' => $asset['source_name'],
+            'converted_to_pdf' => $asset['converted_to_pdf'],
+        ], $asset['converted_to_pdf']
+            ? 'Word document converted to PDF and published in the catalog'
+            : 'Book uploaded and published in the catalog');
     }
 
     if ($method === 'POST' && $path === '/books') {
@@ -1464,7 +1611,12 @@ function route(string $method, string $path): void
             Response::ok(['id' => $id], 'Book updated');
         }
         if ($method === 'DELETE') {
-            pdo()->prepare('UPDATE books SET status="deleted" WHERE id=:id')->execute([':id' => $id]);
+            $book = fetch_book($id);
+            pdo()->prepare('UPDATE books SET status="deleted", updated_at=CURRENT_TIMESTAMP WHERE id=:id')->execute([':id' => $id]);
+            ActivityLogService::log($user, 'delete_catalog_book', 'success', 'book', $id, [
+                'title' => $book['title'],
+                'deletion_mode' => 'soft_delete',
+            ]);
             Response::ok(['id' => $id], 'Book deleted safely');
         }
     }
@@ -1472,8 +1624,13 @@ function route(string $method, string $path): void
     if (preg_match('#^/books/(\d+)/archive$#', $path, $m) && $method === 'PATCH') {
         $user = current_user();
         require_role($user, admin_roles());
-        pdo()->prepare('UPDATE books SET status="archived" WHERE id=:id')->execute([':id' => Validator::int($m[1])]);
-        Response::ok(null, 'Book archived');
+        $id = Validator::int($m[1]);
+        $book = fetch_book($id);
+        pdo()->prepare('UPDATE books SET status="archived", updated_at=CURRENT_TIMESTAMP WHERE id=:id')->execute([':id' => $id]);
+        ActivityLogService::log($user, 'archive_catalog_book', 'success', 'book', $id, [
+            'title' => $book['title'],
+        ]);
+        Response::ok(['id' => $id], 'Book archived');
     }
 
     if (preg_match('#^/books/(\d+)/availability$#', $path, $m) && $method === 'PATCH') {
@@ -2917,7 +3074,9 @@ function route(string $method, string $path): void
                 $confidence = (float)($stt['confidence'] ?? 0);
                 $aiStatus = $transcript === ''
                     ? 'empty_transcript'
-                    : ($confidence > 0 && $confidence < 0.2 ? 'stt_low_confidence' : 'whisper_success');
+                    : ($confidence > 0 && $confidence < 0.2
+                        ? 'stt_low_confidence'
+                        : (($stt['provider'] ?? '') === 'local_whisper_fallback' ? 'whisper_fallback_success' : 'transformer_success'));
             } else {
                 $aiStatus = 'open_vocabulary_stt_unavailable';
             }
@@ -2958,10 +3117,17 @@ function route(string $method, string $path): void
             ]);
             $rows = $stmt->fetchAll();
         }
-        pdo()->prepare('INSERT INTO voice_search_logs (user_id, transcript, results_count, status) VALUES (:user_id, :transcript, :count, :status)')
+        pdo()->prepare(
+            'INSERT INTO voice_search_logs
+             (user_id, transcript, confidence, language, duration_seconds, results_count, status)
+             VALUES (:user_id, :transcript, :confidence, :language, :duration, :count, :status)'
+        )
             ->execute([
                 ':user_id' => $user['id'],
                 ':transcript' => $transcript,
+                ':confidence' => $stt ? round((float)($stt['confidence'] ?? 0), 2) : null,
+                ':language' => (string)($stt['language'] ?? 'en'),
+                ':duration' => $stt['processing_seconds'] ?? null,
                 ':count' => count($rows),
                 ':status' => normalize_log_status(
                     $transcript === '' ? 'empty_transcript' : ($aiStatus === 'open_vocabulary_stt_unavailable' ? 'failed' : 'success')
@@ -3018,13 +3184,34 @@ function route(string $method, string $path): void
             default => $report,
         };
         $map = [
-            'books' => 'SELECT b.title, b.isbn, b.total_copies, b.available_copies, b.status FROM books b ORDER BY b.title',
-            'borrowing' => 'SELECT br.*, u.full_name, b.title FROM borrow_requests br JOIN users u ON u.id=br.user_id JOIN books b ON b.id=br.book_id ORDER BY br.created_at DESC',
-            'users' => 'SELECT u.full_name, u.email, r.code AS role_code, u.status FROM users u JOIN roles r ON r.id=u.role_id',
+            'books' => 'SELECT b.id AS book_id, b.title, b.isbn, b.total_copies, b.available_copies,
+                        (b.total_copies - b.available_copies) AS copies_in_use, b.status, b.created_at
+                        FROM books b ORDER BY b.title',
+            'borrowing' => 'SELECT br.id AS request_id, br.user_id, u.full_name AS user_name,
+                            br.book_id, b.title AS book_title, br.requested_at, br.approved_at,
+                            br.due_date, br.renewed_until, br.returned_at, br.status
+                            FROM borrow_requests br JOIN users u ON u.id=br.user_id
+                            JOIN books b ON b.id=br.book_id ORDER BY br.created_at DESC',
+            'users' => 'SELECT u.id AS user_id, u.full_name, u.email, r.code AS role_code,
+                        u.status, u.last_login_at, u.created_at
+                        FROM users u JOIN roles r ON r.id=u.role_id ORDER BY u.created_at DESC',
             'overdue' => 'SELECT br.*, u.full_name, b.title FROM borrow_requests br JOIN users u ON u.id=br.user_id JOIN books b ON b.id=br.book_id WHERE br.status IN ("approved","overdue") AND br.due_date < CURDATE() ORDER BY br.due_date',
-            'voice-search' => 'SELECT * FROM voice_search_logs ORDER BY created_at DESC',
-            'tts' => 'SELECT * FROM tts_logs ORDER BY created_at DESC',
-            'activity' => 'SELECT * FROM activity_logs ORDER BY created_at DESC',
+            'voice-search' => 'SELECT v.id AS voice_search_id, v.user_id,
+                               COALESCE(u.full_name, "Deleted user") AS user_name,
+                               v.transcript, v.confidence, v.language, v.duration_seconds AS processing_seconds,
+                               v.results_count, v.status, v.created_at
+                               FROM voice_search_logs v LEFT JOIN users u ON u.id=v.user_id
+                               ORDER BY v.created_at DESC',
+            'tts' => 'SELECT t.id AS tts_event_id, t.user_id,
+                      COALESCE(u.full_name, "Deleted user") AS user_name,
+                      t.book_id, b.title AS book_title, t.text_length, t.provider, t.status, t.created_at
+                      FROM tts_logs t LEFT JOIN users u ON u.id=t.user_id
+                      LEFT JOIN books b ON b.id=t.book_id ORDER BY t.created_at DESC',
+            'activity' => 'SELECT al.id AS activity_id, al.user_id,
+                           COALESCE(u.full_name, "System") AS actor, r.code AS role_code,
+                           al.action, al.entity_type, al.entity_id, al.status, al.created_at
+                           FROM activity_logs al LEFT JOIN users u ON u.id=al.user_id
+                           LEFT JOIN roles r ON r.id=u.role_id ORDER BY al.created_at DESC',
         ];
         if (!isset($map[$report])) {
             Response::error('Unknown report', 404);

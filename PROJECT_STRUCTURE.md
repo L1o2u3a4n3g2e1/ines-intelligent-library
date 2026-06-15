@@ -5,7 +5,7 @@ Updated: 2026-06-10
 ```text
 C:/xampp/htdocs/digital-library/
 ├── frontend/                 React 18 + Vite app
-├── backend/                  PHP API, Python gateway, configs, uploads
+├── backend/                  PHP API, configs, uploads
 ├── database/                 MySQL schema, seed data, migration notes, SQL queries
 ├── scripts/                  AI services, gTTS, document pipeline, checks, tests
 ├── models/stt/               Current STT metric reports
@@ -28,8 +28,8 @@ from the dashboard/global search and catalog search to the PHP backend.
 roles, prepared SQL, book upload/import behavior, voice search, gTTS narration,
 tracking logs, and reports.
 
-`backend/python/main.py` is an internal FastAPI gateway for AI model health and
-STT fallback routing. It is not called directly by React.
+The PHP API calls the local Wav2Vec2 and Whisper services directly. React only
+communicates with the authenticated PHP routes.
 
 ## AI services
 

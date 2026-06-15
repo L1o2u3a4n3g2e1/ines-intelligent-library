@@ -24,7 +24,17 @@ export async function logout() {
 }
 
 export async function forgotPassword(email) {
-  return apiRequest('/auth/forgot-password', { method: 'POST', body: JSON.stringify({ email }) });
+  return apiRequest('/auth/forgot-password', {
+    method: 'POST',
+    body: JSON.stringify({ email }),
+  });
+}
+
+export async function validateResetPassword(payload) {
+  return apiRequest('/auth/reset-password/validate', {
+    method: 'POST',
+    body: JSON.stringify(payload),
+  });
 }
 
 export async function resetPassword(payload) {

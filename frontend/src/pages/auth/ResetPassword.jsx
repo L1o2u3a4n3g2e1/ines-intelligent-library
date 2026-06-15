@@ -1,24 +1,68 @@
-import { useState } from 'react';
+import { useEffect, useState } from 'react';
 import { Link, useNavigate, useSearchParams } from 'react-router-dom';
 import * as authApi from '../../api/auth.js';
 import Button from '../../components/Button.jsx';
 
+function passwordChecks(password) {
+  return [
+    { label: 'At least 10 characters', passed: password.length >= 10 },
+    { label: 'Uppercase and lowercase letters', passed: /[A-Z]/.test(password) && /[a-z]/.test(password) },
+    { label: 'At least one number', passed: /\d/.test(password) },
+    { label: 'At least one symbol', passed: /[^A-Za-z0-9]/.test(password) },
+  ];
+}
+
 export default function ResetPassword() {
   const [params] = useSearchParams();
+  const token = params.get('token') || '';
+  const email = params.get('email') || '';
   const [form, setForm] = useState({
-    token: params.get('token') || '',
+    token,
+    email,
     password: '',
     password_confirmation: '',
   });
   const [error, setError] = useState('');
+  const [verification, setVerification] = useState({ status: 'checking', email: '' });
   const [loading, setLoading] = useState(false);
   const navigate = useNavigate();
+  const checks = passwordChecks(form.password);
+  const passwordIsStrong = checks.every((check) => check.passed);
+
+  useEffect(() => {
+    let active = true;
+    if (!token || !email) {
+      setVerification({ status: 'invalid', email: '' });
+      setError('The reset link is incomplete. Request a new reset link.');
+      return () => { active = false; };
+    }
+
+    authApi.validateResetPassword({ token, email })
+      .then((response) => {
+        if (!active) return;
+        const verifiedEmail = response.data?.email || email;
+        setError('');
+        setForm((current) => ({ ...current, token, email: verifiedEmail }));
+        setVerification({ status: 'valid', email: verifiedEmail });
+      })
+      .catch((requestError) => {
+        if (!active) return;
+        setVerification({ status: 'invalid', email: '' });
+        setError(requestError.message);
+      });
+
+    return () => { active = false; };
+  }, [email, token]);
 
   async function handleSubmit(event) {
     event.preventDefault();
     setError('');
     if (form.password !== form.password_confirmation) {
       setError('Password confirmation does not match.');
+      return;
+    }
+    if (!passwordIsStrong) {
+      setError('Choose a password that meets every requirement below.');
       return;
     }
     setLoading(true);
@@ -54,19 +98,27 @@ export default function ResetPassword() {
           <div><strong>INES Digital Library</strong><span>Secure account recovery</span></div>
         </div>
         <h2>Reset password</h2>
+        {verification.status === 'checking' && <div className="inline-info" role="status">Confirming your reset link and email...</div>}
+        {verification.status === 'valid' && <div className="inline-note" role="status">Verified account: {verification.email}</div>}
         {error && <div className="inline-error" role="alert">{error}</div>}
         <form className="form-stack" onSubmit={handleSubmit}>
           <label>
-            New password
-            <input type="password" autoComplete="new-password" minLength="8" value={form.password} onChange={(event) => setForm({ ...form, password: event.target.value })} required />
+            Confirmed account email
+            <input type="email" value={form.email} readOnly aria-readonly="true" />
           </label>
           <label>
-            Confirm new password
-            <input type="password" autoComplete="new-password" minLength="8" value={form.password_confirmation} onChange={(event) => setForm({ ...form, password_confirmation: event.target.value })} required />
+            New password
+            <input type="password" autoComplete="new-password" minLength="10" value={form.password} onChange={(event) => setForm({ ...form, password: event.target.value })} required />
           </label>
-          <Button type="submit" disabled={loading || !form.token}>{loading ? 'Resetting...' : 'Set new password'}</Button>
+          <div className="password-checks" aria-label="Password requirements">
+            {checks.map((check) => <span className={check.passed ? 'passed' : ''} key={check.label}>{check.passed ? 'OK' : 'Required'}: {check.label}</span>)}
+          </div>
+          <label>
+            Confirm new password
+            <input type="password" autoComplete="new-password" minLength="10" value={form.password_confirmation} onChange={(event) => setForm({ ...form, password_confirmation: event.target.value })} required />
+          </label>
+          <Button type="submit" disabled={loading || verification.status !== 'valid' || !passwordIsStrong}>{loading ? 'Resetting...' : 'Set new password'}</Button>
         </form>
-        {!form.token && <div className="inline-error">The reset token is missing. Request a new reset link.</div>}
         <div className="auth-links"><Link to="/forgot-password">Request another link</Link><Link to="/login">Back to login</Link></div>
       </section>
     </main>

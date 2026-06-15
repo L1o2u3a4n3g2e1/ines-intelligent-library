@@ -26,7 +26,8 @@ export const menus = {
   [ROLES.STUDENT]: [
     { label: 'Dashboard', path: '/student/dashboard', icon: Home },
     { label: 'Search Books', path: '/search', icon: BookOpen },
-    { label: 'Upload Book', path: '/student/submissions', icon: Upload },
+    { label: 'Upload Book', path: '/student/upload', icon: Upload },
+    { label: 'Submit Book', path: '/student/submissions', icon: FileCheck2 },
     { label: 'My Borrowed Books', path: '/student/borrowed', icon: LibraryBig },
     { label: 'Reading Progress', path: '/student/progress', icon: ListChecks },
     { label: 'Favorites', path: '/student/favorites', icon: Heart },

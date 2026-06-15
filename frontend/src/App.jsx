@@ -22,6 +22,7 @@ import BorrowedBooks from './pages/student/BorrowedBooks.jsx';
 import ReadingProgress from './pages/student/ReadingProgress.jsx';
 import Favorites from './pages/student/Favorites.jsx';
 import Bookmarks from './pages/student/Bookmarks.jsx';
+import UploadBook from './pages/student/UploadBook.jsx';
 import BookSubmissions from './pages/student/BookSubmissions.jsx';
 import Recommendations from './pages/shared/Recommendations.jsx';
 import Notifications from './pages/shared/Notifications.jsx';
@@ -80,6 +81,7 @@ export default function App() {
         <Route path="/student/progress" element={<ProtectedRoute roles={[ROLES.STUDENT]}><ReadingProgress /></ProtectedRoute>} />
         <Route path="/student/favorites" element={<ProtectedRoute roles={[ROLES.STUDENT]}><Favorites /></ProtectedRoute>} />
         <Route path="/student/bookmarks" element={<ProtectedRoute roles={[ROLES.STUDENT]}><Bookmarks /></ProtectedRoute>} />
+        <Route path="/student/upload" element={<ProtectedRoute roles={[ROLES.STUDENT]}><UploadBook /></ProtectedRoute>} />
         <Route path="/student/submissions" element={<ProtectedRoute roles={[ROLES.STUDENT]}><BookSubmissions /></ProtectedRoute>} />
 
         <Route path="/lecturer/dashboard" element={<ProtectedRoute roles={[ROLES.LECTURER]}><LecturerDashboard /></ProtectedRoute>} />

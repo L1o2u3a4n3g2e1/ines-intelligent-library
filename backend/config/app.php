@@ -13,7 +13,9 @@ return [
         'http://127.0.0.1:3001',
         'http://127.0.0.1:4173',
         'http://127.0.0.1:5173',
+        'http://localhost:3040',
+        'http://127.0.0.1:3040',
     ],
     'upload_dir' => __DIR__ . '/../uploads',
-    'stt_service_url' => 'http://localhost:5001/transcribe',
+    'stt_service_url' => 'http://127.0.0.1:5006/api/stt/transcribe',
 ];

@@ -1,6 +1,6 @@
-import { Download, Headphones } from 'lucide-react';
+import { Download, Headphones, Trash2 } from 'lucide-react';
 import { useState } from 'react';
-import { Link, useParams } from 'react-router-dom';
+import { Link, useNavigate, useParams } from 'react-router-dom';
 import * as borrowApi from '../../api/borrow.js';
 import * as booksApi from '../../api/books.js';
 import * as favoritesApi from '../../api/favorites.js';
@@ -13,6 +13,7 @@ import { useAsync } from '../../hooks/useAsync.js';
 
 export default function BookDetails() {
   const { id } = useParams();
+  const navigate = useNavigate();
   const { user } = useAuth();
   const [message, setMessage] = useState('');
   const [error, setError] = useState('');
@@ -25,6 +26,17 @@ export default function BookDetails() {
     try {
       await action();
       setMessage(successMessage);
+    } catch (err) {
+      setError(err.message);
+    }
+  }
+
+  async function deleteBook() {
+    if (!window.confirm(`Delete "${book.title}" from the public catalogue? Existing activity history will be preserved.`)) return;
+    setError('');
+    try {
+      await booksApi.deleteBook(book.id);
+      navigate('/admin/books', { replace: true, state: { message: `"${book.title}" was deleted.` } });
     } catch (err) {
       setError(err.message);
     }
@@ -53,6 +65,7 @@ export default function BookDetails() {
             {user.role === 'student' && <Button onClick={() => runAction(() => borrowApi.requestBorrow(book.id), 'Borrow request sent to the librarian.')}>Request digital borrow</Button>}
             {user.role === 'student' && <Button variant="secondary" onClick={() => runAction(() => favoritesApi.toggleFavorite(book.id), 'Favorites updated.')}>Favorite</Button>}
             <Link className="button button-ghost button-md" to={`/reader/${book?.id}`}><Headphones size={16} /> Read & listen</Link>
+            {user.role === 'librarian_admin' && <Button variant="danger" onClick={deleteBook}><Trash2 size={16} /> Delete book</Button>}
           </div>
         </Card>
         <Card title="Borrowing guidance" eyebrow="Digital access">

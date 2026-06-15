@@ -26,6 +26,7 @@ models/**/*.pt
 transformer_model/
 transformer_librispeech_model/
 transformer_model_candidate*/
+transformer_model_backup_*/
 lstm_librispeech_model/
 voice_data/
 training_logs/
@@ -78,6 +79,7 @@ coverage/
 
 # Build output
 dist/
+desktop/release/
 
 # Installers (downloaded files)
 *.exe

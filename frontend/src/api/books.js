@@ -23,6 +23,10 @@ export function updateBook(id, payload) {
   return apiRequest(`/books/${id}`, { method: 'PUT', body: JSON.stringify(payload) }, { id, ...payload });
 }
 
+export function deleteBook(id) {
+  return apiRequest(`/books/${id}`, { method: 'DELETE' }, { id });
+}
+
 export function archiveBook(id) {
   return apiRequest(`/books/${id}/archive`, { method: 'PATCH' }, { id });
 }
@@ -31,6 +35,17 @@ export function uploadBookFile(bookId, file) {
   const payload = new FormData();
   payload.append('file', file);
   return apiRequest(`/books/${bookId}/files`, { method: 'POST', body: payload });
+}
+
+export function uploadCatalogBook(metadata, file) {
+  const payload = new FormData();
+  Object.entries(metadata).forEach(([key, value]) => {
+    if (value !== undefined && value !== null && value !== '') {
+      payload.append(key, value);
+    }
+  });
+  payload.append('file', file);
+  return apiRequest('/books/upload', { method: 'POST', body: payload });
 }
 
 export function getBookContent(bookId) {

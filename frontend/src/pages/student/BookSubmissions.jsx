@@ -57,13 +57,13 @@ export default function BookSubmissions() {
   return (
     <>
       <PageHeader
-        title="Upload book"
-        description="Upload a book for the library catalog. It becomes searchable and readable after a librarian verifies and approves it."
+        title="Submit book"
+        description="Submit a book for librarian verification. It becomes searchable and readable only after the librarian approves it."
       />
       {message && <div className="inline-info">{message}</div>}
       {error && <div className="inline-error" role="alert">{error}</div>}
 
-      <Card title="Book information" eyebrow="Librarian verification required">
+      <Card title="Book submission" eyebrow="Librarian approval required">
         <form className="form-grid" onSubmit={handleSubmit}>
           <label>Title<input value={form.title} onChange={(event) => setForm({ ...form, title: event.target.value })} required /></label>
           <label>ISBN<input value={form.isbn} onChange={(event) => setForm({ ...form, isbn: event.target.value })} /></label>

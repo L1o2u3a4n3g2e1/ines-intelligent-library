@@ -18,7 +18,6 @@ export default function Reader() {
   const [rate, setRate] = useState(1);
   const [navigationBusy, setNavigationBusy] = useState(false);
   const [preparedAudioUrl, setPreparedAudioUrl] = useState('');
-  const [audioPreparing, setAudioPreparing] = useState(false);
   const initializedRef = useRef(false);
   const audioRef = useRef(null);
   const startedAtRef = useRef(0);
@@ -51,21 +50,16 @@ export default function Reader() {
   useEffect(() => {
     if (pageState.loading || !narratableText) {
       setPreparedAudioUrl('');
-      setAudioPreparing(false);
       return undefined;
     }
     let active = true;
     setPreparedAudioUrl('');
-    setAudioPreparing(true);
     ttsApi.synthesize({ book_id: Number(id), text: narratableText, language: 'en' })
       .then((response) => {
         if (active) setPreparedAudioUrl(ttsApi.audioUrl(response.data.audio_url));
       })
       .catch((error) => {
         if (active) setSpeechError(error.message);
-      })
-      .finally(() => {
-        if (active) setAudioPreparing(false);
       });
     return () => {
       active = false;
@@ -206,7 +200,6 @@ export default function Reader() {
                 This page is mostly cover art or scanned content. You can still view it; narration will use the catalog summary, or open the next page for book text.
               </div>
             )}
-            {audioPreparing && <div className="inline-info">Preparing this page's gTTS narration in the background...</div>}
             <div className="reader-status">
               <strong>Page {pageNumber} narration</strong>
               <span>{progress}% completed</span>

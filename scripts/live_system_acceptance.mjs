@@ -628,13 +628,14 @@ try {
     const replacementPassword = 'AuditReset!2026';
     const forgot = await api('/auth/forgot-password', {
       method: 'POST',
-      body: { email },
+      body: { email, email_confirmation: email },
     });
     if (!forgot.data?.reset_token) throw new Error('local reset token was not returned');
     await api('/auth/reset-password', {
       method: 'POST',
       body: {
         token: forgot.data.reset_token,
+        email,
         password: replacementPassword,
         password_confirmation: replacementPassword,
       },
