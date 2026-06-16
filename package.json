@@ -3,16 +3,12 @@
   "version": "1.0.0",
   "description": "INES Intelligent Digital Library React frontend and live acceptance tooling",
   "type": "module",
-  "main": "desktop/electron/main.cjs",
   "scripts": {
     "start": "npm run dev",
     "dev": "powershell -NoProfile -ExecutionPolicy Bypass -File scripts/dev_system.ps1",
     "dev:frontend": "vite --host 127.0.0.1 --port 3000",
     "build": "vite build",
     "preview": "vite preview --host 127.0.0.1 --port 4173",
-    "desktop": "npm run build && electron desktop/electron/main.cjs",
-    "desktop:package": "npm run build && electron-builder --win dir",
-    "desktop:portable": "npm run build && electron-builder --win portable",
     "start:ai": "powershell -ExecutionPolicy Bypass -File scripts/start_ai_services.ps1",
     "test:live": "node scripts/live_system_acceptance.mjs"
   },
@@ -34,33 +30,6 @@
   },
   "devDependencies": {
     "@vitejs/plugin-react": "^6.0.2",
-    "electron": "^42.4.0",
-    "electron-builder": "^26.15.3",
     "vite": "^8.0.16"
-  },
-  "build": {
-    "appId": "rw.ac.ines.digital-library",
-    "productName": "INES Digital Library",
-    "asar": true,
-    "directories": {
-      "output": "desktop/release"
-    },
-    "files": [
-      "dist/**/*",
-      "desktop/electron/**/*",
-      "package.json"
-    ],
-    "win": {
-      "target": [
-        {
-          "target": "portable",
-          "arch": [
-            "x64"
-          ]
-        }
-      ],
-      "icon": "desktop/assets/icon.png"
-    },
-    "artifactName": "INES-Digital-Library-${version}-${arch}.${ext}"
   }
 }

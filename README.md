@@ -13,12 +13,12 @@ The active system is an English digital-library application built with:
 ```text
 frontend/             Active React application and public assets
 backend/              Public authenticated PHP API, configuration, and uploads
-database/             Schema, seed data, migrations notes, and SQL queries
+database/             Schema, seed data, and SQL query/migration files
 scripts/              Service, training, acceptance, backup, and restore commands
 speech_datasets/      Real LibriSpeech audio, manifests, and feature caches
 models/stt/           Verified model metric reports
 data/                 Library-specific English speech-search phrases
-docs/                 Architecture, methodology, and audit documentation
+docs/                 Word defense document and related final artifacts
 logs/                 Runtime and per-epoch logs
 ```
 
@@ -46,23 +46,6 @@ Application: `http://127.0.0.1:3000`
 
 PHP API: `http://localhost/digital-library/backend`
 
-## Desktop React app
-
-Build and run the Electron desktop application with:
-
-```powershell
-npm.cmd run desktop
-```
-
-Create the distributable Windows app folder with:
-
-```powershell
-npm.cmd run desktop:package
-```
-
-The desktop shell serves the same React build and connects to the same PHP,
-MySQL, upload, reader, narration, and speech-to-text services.
-
 ## Verification
 
 ```powershell
@@ -81,10 +64,22 @@ Catalog microphone audio follows this order:
 2. Whisper `tiny.en` fallback on port `5001` if the Transformer service is unavailable or cannot decode the recording.
 
 The current connected Transformer service loads the local
-`transformer_model/` checkpoint. That checkpoint was fine-tuned from pretrained
-`facebook/wav2vec2-base-960h` weights on real LibriSpeech manifest samples.
+`transformer_model/` checkpoint. The recorded local run continued from the
+local Wav2Vec2-CTC checkpoint and partially fine-tuned the CTC output head on
+real LibriSpeech manifest samples.
 The latest CPU-bounded evaluation is tracked in
 `models/stt/transformer_metrics.json`: 90.88% aggregate word accuracy and
 58.33% exact-sentence accuracy across 40 dev-clean and 60 test-clean clips.
 
-See `docs/SYSTEM_FEATURES_AI_AND_DATA_GUIDE.md`.
+For defense preparation and the answers to the project questions, see
+`docs/INES_Digital_Library_Defense_QA.docx`.
+
+## Demo accounts
+
+| Role | Email | Password |
+|---|---|---|
+| Librarian/Admin | `library@gmail.com` | `12345678` |
+| Lecturer | `lecturer@gmail.com` | `12345678` |
+
+These are local demonstration accounts only. Change the passwords before any
+real deployment.
