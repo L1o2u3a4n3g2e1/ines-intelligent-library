@@ -5,7 +5,7 @@ The active system is an English digital-library application built with:
 - React 18 and Vite 8 in `frontend/`;
 - PHP 8.2 on XAMPP in `backend/`;
 - MySQL database `ines_intelligent_library`;
-- internal Python AI services for Transformer STT, Whisper fallback, gTTS, and document conversion;
+- internal Python AI services for Transformer STT, Whisper fallback, SpeechT5/gTTS narration, and document conversion;
 - real LibriSpeech audio for speech-to-text evaluation.
 
 ## Project structure
@@ -70,6 +70,17 @@ real LibriSpeech manifest samples.
 The latest CPU-bounded evaluation is tracked in
 `models/stt/transformer_metrics.json`: 90.88% aggregate word accuracy and
 58.33% exact-sentence accuracy across 40 dev-clean and 60 test-clean clips.
+
+## Text-to-speech policy
+
+Book narration follows this order:
+
+1. Microsoft SpeechT5 Transformer TTS through `scripts/speecht5_synthesize.py`;
+2. Google gTTS through `scripts/gtts_synthesize.py` if the local model is unavailable or cannot generate audio.
+
+SpeechT5 produces local WAV narration, while gTTS produces MP3 fallback audio.
+This keeps the defended system Transformer-based for voice input and audio
+reading, while preserving a reliable fallback for demonstrations.
 
 For defense preparation and the answers to the project questions, see
 `docs/INES_Digital_Library_Defense_QA.docx`.

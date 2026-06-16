@@ -102,9 +102,9 @@ function ai_model_status(): array
         [
             'name' => 'Text-to-Speech',
             'task' => 'text_to_speech',
-            'source' => 'Google Text-to-Speech (gTTS 2.5.1)',
+            'source' => 'Microsoft SpeechT5 Transformer TTS with gTTS fallback',
             'status' => 'ready',
-            'accuracy_note' => 'English narration is generated as an MP3 by the backend gTTS service.',
+            'accuracy_note' => 'English narration is generated locally with SpeechT5 when available; gTTS remains as a fallback for reliability.',
         ],
     ];
 }
@@ -455,24 +455,8 @@ function serve_image_file(array $file): void
     exit;
 }
 
-function generate_gtts_audio(array $user, string $text, string $language = 'en'): array
+function prepare_tts_storage(array $user): array
 {
-    $text = trim($text);
-    if ($text === '') {
-        Response::error('Text is required for audio narration', 422);
-    }
-    if (mb_strlen($text) > 3500) {
-        Response::error('Narration sections must be 3,500 characters or shorter', 422);
-    }
-    if ($language !== 'en') {
-        Response::error('Only English gTTS narration is currently enabled', 422);
-    }
-
-    $script = realpath(__DIR__ . '/../../scripts/gtts_synthesize.py');
-    if (!$script) {
-        Response::error('The gTTS narration service is not installed', 503);
-    }
-
     $uploadRoot = realpath(__DIR__ . '/../uploads') ?: (__DIR__ . '/../uploads');
     $relativeDirectory = 'tts/' . (int)$user['id'];
     $targetDirectory = $uploadRoot . DIRECTORY_SEPARATOR . str_replace('/', DIRECTORY_SEPARATOR, $relativeDirectory);
@@ -480,23 +464,43 @@ function generate_gtts_audio(array $user, string $text, string $language = 'en')
         Response::error('Could not prepare narration storage', 500);
     }
 
-    $filename = hash('sha256', $language . '|' . $text) . '.mp3';
+    return [$relativeDirectory, $targetDirectory];
+}
+
+function synthesize_with_script(string $script, string $text, string $target, string $language, string $tempPrefix): ?array
+{
+    $input = tempnam(sys_get_temp_dir(), $tempPrefix);
+    if (!$input || file_put_contents($input, $text) === false) {
+        Response::error('Could not prepare narration text', 500);
+    }
+    try {
+        $command = 'python ' . escapeshellarg($script) . ' ' .
+            escapeshellarg($input) . ' ' . escapeshellarg($target) . ' --lang ' . escapeshellarg($language);
+        $result = run_json_command($command);
+        if (!($result['success'] ?? false) || !is_file($target) || filesize($target) === 0) {
+            @unlink($target);
+            return null;
+        }
+        return $result;
+    } finally {
+        @unlink($input);
+    }
+}
+
+function generate_gtts_audio(array $user, string $text, string $language = 'en'): array
+{
+    [$relativeDirectory, $targetDirectory] = prepare_tts_storage($user);
+    $script = realpath(__DIR__ . '/../../scripts/gtts_synthesize.py');
+    if (!$script) {
+        Response::error('The gTTS narration service is not installed', 503);
+    }
+
+    $filename = hash('sha256', 'gtts|' . $language . '|' . $text) . '.mp3';
     $target = $targetDirectory . DIRECTORY_SEPARATOR . $filename;
     if (!is_file($target) || filesize($target) === 0) {
-        $input = tempnam(sys_get_temp_dir(), 'ines-gtts-');
-        if (!$input || file_put_contents($input, $text) === false) {
-            Response::error('Could not prepare narration text', 500);
-        }
-        try {
-            $command = 'python ' . escapeshellarg($script) . ' ' .
-                escapeshellarg($input) . ' ' . escapeshellarg($target) . ' --lang ' . escapeshellarg($language);
-            $result = run_json_command($command);
-            if (!($result['success'] ?? false) || !is_file($target) || filesize($target) === 0) {
-                @unlink($target);
-                Response::error('gTTS could not generate this narration. Check the internet connection and try again.', 503);
-            }
-        } finally {
-            @unlink($input);
+        $result = synthesize_with_script($script, $text, $target, $language, 'ines-gtts-');
+        if (!$result) {
+            Response::error('gTTS could not generate this narration. Check the internet connection and try again.', 503);
         }
     }
 
@@ -508,6 +512,54 @@ function generate_gtts_audio(array $user, string $text, string $language = 'en')
         'file_size' => filesize($target),
         'provider' => 'gtts',
     ];
+}
+
+function generate_speecht5_audio(array $user, string $text, string $language = 'en'): ?array
+{
+    [$relativeDirectory, $targetDirectory] = prepare_tts_storage($user);
+    $script = realpath(__DIR__ . '/../../scripts/speecht5_synthesize.py');
+    if (!$script) {
+        return null;
+    }
+
+    $filename = hash('sha256', 'speecht5|' . $language . '|' . $text) . '.wav';
+    $target = $targetDirectory . DIRECTORY_SEPARATOR . $filename;
+    if (!is_file($target) || filesize($target) === 0) {
+        $result = synthesize_with_script($script, $text, $target, $language, 'ines-speecht5-');
+        if (!$result) {
+            return null;
+        }
+    }
+
+    return [
+        'filename' => $filename,
+        'file_path' => 'uploads/' . $relativeDirectory . '/' . $filename,
+        'absolute_path' => $target,
+        'mime_type' => 'audio/wav',
+        'file_size' => filesize($target),
+        'provider' => 'speecht5',
+    ];
+}
+
+function generate_narration_audio(array $user, string $text, string $language = 'en'): array
+{
+    $text = trim($text);
+    if ($text === '') {
+        Response::error('Text is required for audio narration', 422);
+    }
+    if (mb_strlen($text) > 3500) {
+        Response::error('Narration sections must be 3,500 characters or shorter', 422);
+    }
+    if ($language !== 'en') {
+        Response::error('Only English narration is currently enabled', 422);
+    }
+
+    $speechT5 = generate_speecht5_audio($user, $text, $language);
+    if ($speechT5) {
+        return $speechT5;
+    }
+
+    return generate_gtts_audio($user, $text, $language);
 }
 
 function process_uploaded_library_file(array $file, string $relativeDirectory): array
@@ -3140,12 +3192,13 @@ function route(string $method, string $path): void
         ]);
     }
 
-    if (preg_match('#^/tts/audio/([a-f0-9]{64}\.mp3)$#', $path, $m) && $method === 'GET') {
+    if (preg_match('#^/tts/audio/([a-f0-9]{64}\.(?:mp3|wav))$#', $path, $m) && $method === 'GET') {
         $user = current_user();
+        $mimeType = str_ends_with($m[1], '.wav') ? 'audio/wav' : 'audio/mpeg';
         $file = [
             'file_path' => 'uploads/tts/' . (int)$user['id'] . '/' . $m[1],
-            'original_name' => 'ines-library-narration.mp3',
-            'mime_type' => 'audio/mpeg',
+            'original_name' => 'ines-library-narration.' . pathinfo($m[1], PATHINFO_EXTENSION),
+            'mime_type' => $mimeType,
         ];
         serve_stored_file(resolve_stored_upload($file), true);
     }
@@ -3155,20 +3208,20 @@ function route(string $method, string $path): void
         $user = current_user();
         $data = body();
         $text = trim((string)($data['text'] ?? ''));
-        $audio = generate_gtts_audio($user, $text, (string)($data['language'] ?? 'en'));
+        $audio = generate_narration_audio($user, $text, (string)($data['language'] ?? 'en'));
         pdo()->prepare('INSERT INTO tts_logs (user_id, book_id, text_length, provider, status) VALUES (:user_id, :book_id, :text_length, :provider, "success")')
             ->execute([
                 ':user_id' => $user['id'],
                 ':book_id' => optional_int($data['book_id'] ?? null, 'book_id'),
                 ':text_length' => mb_strlen($text),
-                ':provider' => 'gtts',
+                ':provider' => $audio['provider'],
             ]);
         Response::ok([
             'audio_url' => '/tts/audio/' . $audio['filename'],
             'text_length' => mb_strlen($text),
-            'provider' => 'gtts',
+            'provider' => $audio['provider'],
             'file_size' => $audio['file_size'],
-        ], 'gTTS narration generated');
+        ], $audio['provider'] === 'speecht5' ? 'SpeechT5 narration generated' : 'gTTS narration generated');
     }
 
     if (str_starts_with($path, '/reports/')) {

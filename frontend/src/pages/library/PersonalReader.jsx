@@ -78,7 +78,7 @@ export default function PersonalReader() {
 
   return (
     <DataState loading={book.loading || content.loading} error={book.error || content.error} empty={!book.data} onRetry={() => { book.reload(); content.reload(); }}>
-      <PageHeader title={book.data?.title || 'Private book'} description="Read privately or listen with server-generated English gTTS narration." />
+      <PageHeader title={book.data?.title || 'Private book'} description="Read privately or listen with server-generated English narration." />
       <Card>
         <article className="reader-panel">
           {audioError && <div className="inline-error" role="alert">{audioError}</div>}
@@ -97,7 +97,7 @@ export default function PersonalReader() {
           <audio ref={audioRef} onEnded={() => setAudioState('idle')} onError={() => setAudioState('idle')} />
           <div className="button-row centered">
             <Button variant="ghost" size="icon" aria-label="Previous section" disabled={sectionIndex === 0} onClick={() => move(sectionIndex - 1)}><SkipBack size={18} /></Button>
-            <Button size="icon" aria-label="Play gTTS narration" disabled={!currentSection || ['playing', 'loading'].includes(audioState)} onClick={play}><Play size={18} /></Button>
+            <Button size="icon" aria-label="Play narration" disabled={!currentSection || ['playing', 'loading'].includes(audioState)} onClick={play}><Play size={18} /></Button>
             <Button variant="secondary" size="icon" aria-label="Pause narration" disabled={audioState !== 'playing'} onClick={pause}><Pause size={18} /></Button>
             <Button variant="ghost" size="icon" aria-label="Stop narration" disabled={audioState === 'idle'} onClick={stop}><Square size={18} /></Button>
             <Button variant="ghost" size="icon" aria-label="Next section" disabled={!sections.length || sectionIndex >= sections.length - 1} onClick={() => move(sectionIndex + 1)}><SkipForward size={18} /></Button>

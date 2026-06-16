@@ -90,7 +90,7 @@ document = """<?xml version="1.0" encoding="UTF-8" standalone="yes"?>
 <w:document xmlns:w="http://schemas.openxmlformats.org/wordprocessingml/2006/main">
   <w:body>
     <w:p><w:pPr><w:pStyle w:val="Heading1"/></w:pPr><w:r><w:t>INES Live Acceptance Book</w:t></w:r></w:p>
-    <w:p><w:r><w:t>This is real English text used to verify Word conversion, PDF storage, extraction, reading progress, and gTTS narration.</w:t></w:r></w:p>
+    <w:p><w:r><w:t>This is real English text used to verify Word conversion, PDF storage, extraction, reading progress, and English narration.</w:t></w:r></w:p>
     <w:p><w:r><w:t>The digital library should preserve this text after conversion.</w:t></w:r></w:p>
     <w:sectPr/>
   </w:body>
@@ -571,7 +571,7 @@ try {
     return `"${response.data.transcript}" via ${sttModel}`;
   });
 
-  await test('gTTS generates and serves real English MP3 audio', async () => {
+  await test('TTS generates and serves real English audio', async () => {
     const generated = await api('/tts', {
       method: 'POST',
       token: student.token,
@@ -583,14 +583,15 @@ try {
     });
     const audio = await api(generated.data.audio_url, { token: student.token, raw: true });
     const bytes = Buffer.from(await audio.arrayBuffer());
-    if (audio.headers.get('content-type') !== 'audio/mpeg' || bytes.length < 500) {
-      throw new Error(`invalid MP3 response: ${audio.headers.get('content-type')}, ${bytes.length} bytes`);
+    const contentType = audio.headers.get('content-type');
+    if (!['audio/mpeg', 'audio/wav'].some((type) => contentType?.startsWith(type)) || bytes.length < 500) {
+      throw new Error(`invalid audio response: ${contentType}, ${bytes.length} bytes`);
     }
     const logs = await api('/tts/logs', { token: student.token });
-    if (!logs.data.some((row) => Number(row.book_id) === ids.book && row.provider === 'gtts')) {
-      throw new Error('gTTS log missing');
+    if (!logs.data.some((row) => Number(row.book_id) === ids.book && ['speecht5', 'gtts'].includes(row.provider))) {
+      throw new Error('TTS log missing');
     }
-    return `${bytes.length} MP3 bytes; log persisted`;
+    return `${bytes.length} audio bytes from ${generated.data.provider}; log persisted`;
   });
 
   await test('Librarian analytics, top lists, reports, logs, settings, and AI status', async () => {
