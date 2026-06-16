@@ -189,17 +189,6 @@ export default function Reader() {
 
           <section className="reader-listen-pane">
             {speechError && <div className="inline-error" role="alert">{speechError}</div>}
-            {pageState.loading && <div className="inline-info">Extracting this page only. Narration should be ready in a few seconds...</div>}
-            {pageState.error && (
-              <div className="inline-note">
-                This page has no extractable text. You can still view it, and narration will use the catalog summary when available.
-              </div>
-            )}
-            {!pageState.loading && !pageState.error && !currentText && fallbackText && (
-              <div className="inline-note">
-                This page is mostly cover art or scanned content. You can still view it; narration will use the catalog summary, or open the next page for book text.
-              </div>
-            )}
             <div className="reader-status">
               <strong>Page {pageNumber} narration</strong>
               <span>{progress}% completed</span>
@@ -253,13 +242,6 @@ export default function Reader() {
                     <span>{file.original_name}</span>
                     <audio controls preload="metadata" src={booksApi.fileStreamUrl(file.id)}>Your browser does not support audio playback.</audio>
                   </div>
-                ))}
-              </div>
-            )}
-            {book?.files?.length > 0 && (
-              <div className="button-row centered reader-downloads">
-                {book.files.map((file) => (
-                  <a className="button button-secondary button-sm" key={file.id} href={booksApi.fileDownloadUrl(file.id)}>Download {file.file_type}</a>
                 ))}
               </div>
             )}

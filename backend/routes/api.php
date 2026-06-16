@@ -760,10 +760,7 @@ function route(string $method, string $path): void
             Response::error('An account with this email already exists', 409);
         }
 
-        $roleCode = strtoupper((string)($data['role'] ?? 'STUDENT'));
-        if ($roleCode === 'LIBRARIAN_ADMIN') {
-            Response::error('Administrator accounts must be created by an existing administrator', 403);
-        }
+        $roleCode = 'STUDENT';
         $roleStmt = pdo()->prepare('SELECT id FROM roles WHERE code = :code AND status = "active"');
         $roleStmt->execute([':code' => $roleCode]);
         $role = $roleStmt->fetch();

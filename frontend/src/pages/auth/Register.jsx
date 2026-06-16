@@ -2,10 +2,9 @@ import { useState } from 'react';
 import { Link, useNavigate } from 'react-router-dom';
 import Button from '../../components/Button.jsx';
 import { useAuth } from '../../context/AuthContext.jsx';
-import { ROLES } from '../../utils/roles.js';
 
 export default function Register() {
-  const [form, setForm] = useState({ name: '', email: '', phone: '', role: ROLES.STUDENT, password: '', confirmPassword: '' });
+  const [form, setForm] = useState({ name: '', email: '', phone: '', password: '', confirmPassword: '' });
   const [error, setError] = useState('');
   const [loading, setLoading] = useState(false);
   const { register } = useAuth();
@@ -65,13 +64,12 @@ export default function Register() {
           </div>
         </div>
         <h2>Create your account</h2>
-        <p>Register a student or lecturer account. Librarian accounts are created by an administrator.</p>
+        <p>Register a student account. Lecturer and librarian roles are assigned by the library administrator.</p>
         {error && <div className="inline-error" role="alert">{error}</div>}
         <form onSubmit={handleSubmit} className="form-grid">
           <label>Full name<input autoComplete="name" value={form.name} onChange={(e) => setForm({ ...form, name: e.target.value })} required /></label>
           <label>Email<input type="email" autoComplete="email" value={form.email} onChange={(e) => setForm({ ...form, email: e.target.value })} required /></label>
           <label>Phone<input type="tel" autoComplete="tel" value={form.phone} onChange={(e) => setForm({ ...form, phone: e.target.value })} required /></label>
-          <label>Role<select value={form.role} onChange={(e) => setForm({ ...form, role: e.target.value })}><option value={ROLES.STUDENT}>Student</option><option value={ROLES.LECTURER}>Lecturer</option></select></label>
           <label>Password<input type="password" autoComplete="new-password" minLength={8} value={form.password} onChange={(e) => setForm({ ...form, password: e.target.value })} required /></label>
           <label>Confirm password<input type="password" autoComplete="new-password" minLength={8} value={form.confirmPassword} onChange={(e) => setForm({ ...form, confirmPassword: e.target.value })} required /></label>
           <Button type="submit" className="span-2" disabled={loading}>{loading ? 'Creating account...' : 'Create INES account'}</Button>

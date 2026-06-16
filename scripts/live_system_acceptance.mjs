@@ -5,7 +5,7 @@ import path from 'node:path';
 import mysql from 'mysql2/promise';
 
 const API = process.env.INES_API_URL || 'http://localhost/digital-library/backend';
-const ADMIN_EMAIL = process.env.INES_ADMIN_EMAIL || 'librarian@ines.ac.rw';
+const ADMIN_EMAIL = process.env.INES_ADMIN_EMAIL || 'library@gmail.com';
 const ADMIN_PASSWORD = process.env.INES_ADMIN_PASSWORD || '';
 const runId = `${Date.now()}-${Math.random().toString(16).slice(2, 8)}`;
 const password = 'AuditPass!2026';

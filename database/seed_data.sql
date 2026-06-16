@@ -59,11 +59,6 @@ FROM roles r WHERE r.code = 'LECTURER'
 ON DUPLICATE KEY UPDATE full_name = VALUES(full_name), role_id = VALUES(role_id);
 
 INSERT INTO users (role_id, full_name, email, phone, password_hash, email_verified_at, status)
-SELECT r.id, 'Librarian Admin Demo', 'admin@ines.ac.rw', '+250700000003', '$2y$12$LbCWrHGIcrjNtq2PwZL8sO3JjBLhNUrO53QXn7OGiFMEAtVV3/20O', NOW(), 'active'
-FROM roles r WHERE r.code = 'LIBRARIAN_ADMIN'
-ON DUPLICATE KEY UPDATE full_name = VALUES(full_name), role_id = VALUES(role_id);
-
-INSERT INTO users (role_id, full_name, email, phone, password_hash, email_verified_at, status)
 SELECT r.id, 'Library Demo', 'library@gmail.com', '+250700000004', '$2y$10$HziApy0G1VqRb3QqtzjyXONikSzUq3ovq1AY0iC2zyufpogOg3E4C', NOW(), 'active'
 FROM roles r WHERE r.code = 'LIBRARIAN_ADMIN'
 ON DUPLICATE KEY UPDATE full_name = VALUES(full_name), role_id = VALUES(role_id), password_hash = VALUES(password_hash), status = 'active';
@@ -164,7 +159,7 @@ ON DUPLICATE KEY UPDATE setting_value = VALUES(setting_value), description = VAL
 INSERT INTO notifications (user_id, type, title, message)
 SELECT u.id, 'system', 'Welcome to INES Library', 'Your account is ready for the intelligent digital library.'
 FROM users u
-WHERE u.email IN ('student@ines.ac.rw', 'lecturer@ines.ac.rw', 'admin@ines.ac.rw', 'library@gmail.com', 'lecturer@gmail.com')
+WHERE u.email IN ('student@ines.ac.rw', 'lecturer@ines.ac.rw', 'library@gmail.com', 'lecturer@gmail.com')
   AND NOT EXISTS (
     SELECT 1
     FROM notifications n

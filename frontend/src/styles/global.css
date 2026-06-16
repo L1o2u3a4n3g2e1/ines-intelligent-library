@@ -453,7 +453,6 @@ th { color: var(--muted); font-size: 0.78rem; text-transform: uppercase; letter-
   max-height: 260px;
   overflow: auto;
 }
-.reader-downloads { margin-top: 14px; }
 .reader-status { display: flex; justify-content: space-between; gap: 14px; color: var(--muted); }
 .reader-options { display: flex; justify-content: center; margin: 14px 0; }
 .reader-options label { width: min(220px, 100%); text-align: left; }

@@ -1,4 +1,4 @@
-import { Download, Headphones, Trash2 } from 'lucide-react';
+import { Headphones, Trash2 } from 'lucide-react';
 import { useState } from 'react';
 import { Link, useNavigate, useParams } from 'react-router-dom';
 import * as borrowApi from '../../api/borrow.js';
@@ -75,11 +75,10 @@ export default function BookDetails() {
           {book?.files?.length ? (
             <div className="file-list">
               {book.files.map((file) => (
-                <a className="file-row" key={file.id} href={booksApi.fileDownloadUrl(file.id)}>
+                <div className="file-row" key={file.id}>
                   <span>{file.original_name}</span>
                   <small>{file.file_type}</small>
-                  <Download size={16} />
-                </a>
+                </div>
               ))}
             </div>
           ) : (

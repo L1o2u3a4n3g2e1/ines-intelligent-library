@@ -21,7 +21,7 @@ export default function Login() {
     setError('');
     try {
       const session = await login(form.email, form.password);
-      navigate(location.state?.from || getDashboardPath(session.user.role), { replace: true });
+      navigate(getDashboardPath(session.user.role), { replace: true });
     } catch (err) {
       setError(err.message);
     } finally {

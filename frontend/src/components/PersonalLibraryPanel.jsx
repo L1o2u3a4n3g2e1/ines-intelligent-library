@@ -1,4 +1,4 @@
-import { BookOpen, Download, Headphones, Trash2, Upload } from 'lucide-react';
+import { BookOpen, Headphones, Trash2, Upload } from 'lucide-react';
 import { useState } from 'react';
 import { Link } from 'react-router-dom';
 import * as personalBooksApi from '../api/personalBooks.js';
@@ -79,7 +79,6 @@ export default function PersonalLibraryPanel({ compact = false }) {
                   </div>
                   <div className="button-row">
                     <Link className="button button-primary button-sm" to={`/my-library/${book.id}`}><Headphones size={15} /> Read or listen</Link>
-                    <a className="button button-secondary button-sm" href={personalBooksApi.personalBookDownloadUrl(book.id)}><Download size={15} /> Download</a>
                     <Button size="icon" variant="ghost" aria-label={`Delete ${book.title}`} onClick={() => remove(book)}><Trash2 size={15} /></Button>
                   </div>
                 </article>

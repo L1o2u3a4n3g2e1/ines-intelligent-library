@@ -1,4 +1,4 @@
-import { Download, Headphones, Send } from 'lucide-react';
+import { Headphones, Send } from 'lucide-react';
 import { useState } from 'react';
 import { Link } from 'react-router-dom';
 import * as submissionsApi from '../../api/bookSubmissions.js';
@@ -107,11 +107,6 @@ export default function BookSubmissions() {
                     <Link className="button button-ghost button-sm" to={`/reader/${row.approved_book_id}`}><Headphones size={15} /> Read & listen</Link>
                   </div>
                 ) : <span className="muted-text">Pending approval</span>,
-              },
-              {
-                key: 'download',
-                label: 'File',
-                render: (row) => <a className="button button-ghost button-sm" href={submissionsApi.submissionDownloadUrl(row.id)}><Download size={15} /> Download</a>,
               },
             ]}
             rows={rows}
