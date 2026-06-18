@@ -58,13 +58,23 @@ Write-Host '[start] Speech services' -ForegroundColor Cyan
 & (Join-Path $PSScriptRoot 'start_ai_services.ps1') | Format-Table -AutoSize
 Wait-ForPort 'Whisper fallback STT' 5001 120
 Wait-ForPort 'Wav2Vec2 Transformer STT' 5006 120
+Wait-ForPort 'SpeechT5 TTS service' 5007 180
 
 $backend = Invoke-RestMethod -Uri 'http://localhost/digital-library/backend/health' -TimeoutSec 10
 $backendStatus = if ($backend.data -and $backend.data.status) { $backend.data.status } else { '' }
-if ($backendStatus -ne 'ok') {
+if ($backend.data.database -ne 'connected' -or -not $backend.data.uploads_writable) {
     throw 'The PHP backend is not healthy. Check Apache and MySQL.'
 }
-Write-Host '[ready] PHP backend and database' -ForegroundColor Green
+Write-Host '[ready] PHP backend, database, and uploads' -ForegroundColor Green
+
+$ttsReady = $backend.data.tts -and (
+    ($backend.data.tts.service -and $backend.data.tts.service.success) -or
+    ($backend.data.tts.primary -and $backend.data.tts.primary.success)
+)
+if (-not $ttsReady) {
+    throw 'SpeechT5 is not preloaded according to backend health. Run scripts/start_ai_services.ps1 and check the SpeechT5 output.'
+}
+Write-Host '[ready] SpeechT5 TTS preload verified by backend health' -ForegroundColor Green
 
 Write-Host ''
 Write-Host 'Application: http://127.0.0.1:3000' -ForegroundColor Yellow

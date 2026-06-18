@@ -129,7 +129,11 @@ try {
     if (response.data.database !== 'connected' || response.data.status !== 'ok') {
       throw new Error(JSON.stringify(response.data));
     }
-    return 'backend ok, database connected, uploads writable';
+    const speechT5 = response.data.tts?.primary;
+    if (!speechT5?.success || !speechT5?.preload?.ready) {
+      throw new Error(`SpeechT5 is not ready for first playback: ${JSON.stringify(response.data.tts)}`);
+    }
+    return `backend ok, database connected, SpeechT5 preload ${speechT5.preload.bytes} bytes`;
   });
 
   await test('Real student registration', async () => {
@@ -581,14 +585,17 @@ try {
         text: 'Welcome to the INES Digital Library live English narration test.',
       },
     });
+    if (generated.data.provider !== 'speecht5') {
+      throw new Error(`live demo narration must use preloaded SpeechT5, got ${generated.data.provider}`);
+    }
     const audio = await api(generated.data.audio_url, { token: student.token, raw: true });
     const bytes = Buffer.from(await audio.arrayBuffer());
     const contentType = audio.headers.get('content-type');
-    if (!['audio/mpeg', 'audio/wav'].some((type) => contentType?.startsWith(type)) || bytes.length < 500) {
+    if (!contentType?.startsWith('audio/wav') || bytes.length < 500) {
       throw new Error(`invalid audio response: ${contentType}, ${bytes.length} bytes`);
     }
     const logs = await api('/tts/logs', { token: student.token });
-    if (!logs.data.some((row) => Number(row.book_id) === ids.book && ['speecht5', 'gtts'].includes(row.provider))) {
+    if (!logs.data.some((row) => Number(row.book_id) === ids.book && row.provider === 'speecht5')) {
       throw new Error('TTS log missing');
     }
     return `${bytes.length} audio bytes from ${generated.data.provider}; log persisted`;

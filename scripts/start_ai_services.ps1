@@ -3,7 +3,9 @@ $ErrorActionPreference = 'Stop'
 $root = Split-Path -Parent $PSScriptRoot
 $python = 'C:\Users\Anne Louange\AppData\Local\Programs\Python\Python311\python.exe'
 $logDirectory = Join-Path $root 'logs'
+$tmpDirectory = Join-Path $root 'tmp'
 New-Item -ItemType Directory -Force -Path $logDirectory | Out-Null
+New-Item -ItemType Directory -Force -Path $tmpDirectory | Out-Null
 
 $services = @(
     @{
@@ -19,6 +21,13 @@ $services = @(
         Script = 'scripts\transformer_speech_service.py'
         Output = 'transformer-stt.out.log'
         Error = 'transformer-stt.err.log'
+    },
+    @{
+        Name = 'SpeechT5 TTS service'
+        Port = 5007
+        Script = 'scripts\speecht5_tts_service.py'
+        Output = 'speecht5-tts.out.log'
+        Error = 'speecht5-tts.err.log'
     }
 )
 
@@ -37,4 +46,73 @@ foreach ($service in $services) {
     } else {
         [pscustomobject]@{ Service = $service.Name; Status = 'RUNNING'; ProcessId = $listener.OwningProcess; Port = $service.Port }
     }
+}
+
+$preloadFile = Join-Path $tmpDirectory 'speecht5-preload.wav'
+$ttsServiceHealth = $null
+try {
+    $ttsServiceHealth = Invoke-RestMethod -Uri 'http://127.0.0.1:5007/health' -TimeoutSec 10
+} catch {
+    $ttsServiceHealth = $null
+}
+if ($ttsServiceHealth -and $ttsServiceHealth.success) {
+    [pscustomobject]@{
+        Service = 'SpeechT5 TTS'
+        Status = 'SERVICE_READY'
+        ProcessId = ''
+        Port = 5007
+        PreloadBytes = ''
+    }
+    return
+}
+
+$ttsOutput = & $python 'scripts\speecht5_synthesize.py' --health --preload-file $preloadFile 2>&1
+if ($LASTEXITCODE -eq 0) {
+    $ttsHealth = $null
+    foreach ($line in $ttsOutput) {
+        try {
+            $candidate = $line | ConvertFrom-Json
+            if ($null -ne $candidate.success) {
+                $ttsHealth = $candidate
+            }
+        } catch {
+        }
+    }
+    if ($ttsHealth.success -and $ttsHealth.preload.ready) {
+        [pscustomobject]@{
+            Service = 'SpeechT5 TTS'
+            Status = 'PRELOADED'
+            ProcessId = ''
+            Port = ''
+            PreloadBytes = $ttsHealth.preload.bytes
+        }
+        return
+    }
+}
+
+$ttsOutput = & $python 'scripts\speecht5_synthesize.py' --preload --preload-file $preloadFile 2>&1
+if ($LASTEXITCODE -ne 0) {
+    throw "SpeechT5 preload failed: $($ttsOutput -join [Environment]::NewLine)"
+}
+
+$ttsJson = $null
+foreach ($line in $ttsOutput) {
+    try {
+        $candidate = $line | ConvertFrom-Json
+        if ($null -ne $candidate.success) {
+            $ttsJson = $candidate
+        }
+    } catch {
+    }
+}
+if (-not $ttsJson.success -or -not $ttsJson.preload.ready) {
+    throw "SpeechT5 preload did not produce a ready WAV: $($ttsOutput -join [Environment]::NewLine)"
+}
+
+[pscustomobject]@{
+    Service = 'SpeechT5 TTS'
+    Status = 'PRELOADED'
+    ProcessId = ''
+    Port = ''
+    PreloadBytes = $ttsJson.preload.bytes
 }

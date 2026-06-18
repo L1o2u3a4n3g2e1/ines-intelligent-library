@@ -1,6 +1,6 @@
-export default function Button({ children, variant = 'primary', size = 'md', className = '', ...props }) {
+export default function Button({ children, type = 'button', variant = 'primary', size = 'md', className = '', ...props }) {
   return (
-    <button className={`button button-${variant} button-${size} ${className}`} {...props}>
+    <button type={type} className={`button button-${variant} button-${size} ${className}`} {...props}>
       {children}
     </button>
   );

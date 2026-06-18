@@ -68,11 +68,130 @@ function service_upload_audio(string $url, array $file, int $timeout = 60): ?arr
     return is_array($data) ? $data : null;
 }
 
+function service_json_post(string $url, array $payload, int $timeout = 30): ?array
+{
+    if (!function_exists('curl_init')) {
+        return null;
+    }
+    $curl = curl_init($url);
+    curl_setopt_array($curl, [
+        CURLOPT_POST => true,
+        CURLOPT_RETURNTRANSFER => true,
+        CURLOPT_TIMEOUT => $timeout,
+        CURLOPT_CONNECTTIMEOUT => 2,
+        CURLOPT_HTTPHEADER => ['Content-Type: application/json'],
+        CURLOPT_POSTFIELDS => json_encode($payload),
+    ]);
+    $raw = curl_exec($curl);
+    $status = curl_getinfo($curl, CURLINFO_RESPONSE_CODE);
+    curl_close($curl);
+
+    if ($raw === false || $status < 200 || $status >= 300) {
+        return null;
+    }
+    $data = json_decode($raw, true);
+    return is_array($data) ? $data : null;
+}
+
+function tts_preload_file(): string
+{
+    $directory = __DIR__ . '/../../tmp';
+    if (!is_dir($directory)) {
+        @mkdir($directory, 0775, true);
+    }
+    return $directory . '/speecht5-preload.wav';
+}
+
+function speecht5_health(bool $refresh = false): array
+{
+    static $cached = null;
+    if (!$refresh && is_array($cached)) {
+        return $cached;
+    }
+
+    $script = realpath(__DIR__ . '/../../scripts/speecht5_synthesize.py');
+    if (!$script) {
+        $cached = [
+            'success' => false,
+            'status' => 'script_missing',
+            'provider' => 'speecht5',
+            'error' => 'scripts/speecht5_synthesize.py was not found',
+            'preload' => ['file' => tts_preload_file(), 'ready' => false, 'bytes' => 0],
+        ];
+        return $cached;
+    }
+
+    $command = 'python ' . escapeshellarg($script) .
+        ' --health --preload-file ' . escapeshellarg(tts_preload_file());
+    $result = run_json_command($command);
+    if (!is_array($result)) {
+        $result = [
+            'success' => false,
+            'status' => 'health_check_failed',
+            'provider' => 'speecht5',
+            'error' => 'SpeechT5 health check did not return JSON',
+            'preload' => ['file' => tts_preload_file(), 'ready' => false, 'bytes' => 0],
+        ];
+    }
+
+    $result['success'] = (bool)($result['success'] ?? false);
+    $result['status'] = (string)($result['status'] ?? ($result['success'] ? 'ready' : 'not_ready'));
+    $cached = $result;
+    return $cached;
+}
+
+function warm_speecht5_model(): ?array
+{
+    $health = speecht5_health();
+    if ($health['success'] ?? false) {
+        return $health;
+    }
+
+    $script = realpath(__DIR__ . '/../../scripts/speecht5_synthesize.py');
+    if (!$script) {
+        return null;
+    }
+
+    $command = 'python ' . escapeshellarg($script) .
+        ' --preload --preload-file ' . escapeshellarg(tts_preload_file());
+    $result = run_json_command($command);
+    if (!($result['success'] ?? false)) {
+        return null;
+    }
+
+    return speecht5_health(true);
+}
+
+function tts_health(): array
+{
+    $speechT5 = speecht5_health();
+    $serviceHealth = service_json_get('http://127.0.0.1:5007/health', 2);
+    $fallbackScript = realpath(__DIR__ . '/../../scripts/gtts_synthesize.py');
+    $fallbackReady = (bool)$fallbackScript;
+
+    return [
+        'status' => (($serviceHealth['success'] ?? false) || ($speechT5['success'] ?? false)) ? 'ready' : ($fallbackReady ? 'fallback_only' : 'not_ready'),
+        'service' => $serviceHealth ?: [
+            'success' => false,
+            'status' => 'service_offline',
+            'provider' => 'speecht5_service',
+            'url' => 'http://127.0.0.1:5007',
+        ],
+        'primary' => $speechT5,
+        'fallback' => [
+            'provider' => 'gtts',
+            'status' => $fallbackReady ? 'available' : 'script_missing',
+            'script' => $fallbackScript ?: null,
+        ],
+    ];
+}
+
 function ai_model_status(): array
 {
     $transformerHealth = service_json_get('http://127.0.0.1:5006/health', 2);
     $transformerMetricsPath = __DIR__ . '/../../models/stt/transformer_metrics.json';
     $transformerMetrics = is_file($transformerMetricsPath) ? json_decode(file_get_contents($transformerMetricsPath), true) : null;
+    $ttsHealth = tts_health();
 
     return [
         [
@@ -103,8 +222,18 @@ function ai_model_status(): array
             'name' => 'Text-to-Speech',
             'task' => 'text_to_speech',
             'source' => 'Microsoft SpeechT5 Transformer TTS with gTTS fallback',
-            'status' => 'ready',
-            'accuracy_note' => 'English narration is generated locally with SpeechT5 when available; gTTS remains as a fallback for reliability.',
+            'status' => $ttsHealth['status'],
+            'accuracy_note' => (($ttsHealth['service']['success'] ?? false) || ($ttsHealth['primary']['success'] ?? false))
+                ? 'English narration is generated locally with SpeechT5; the fast service keeps the model loaded, and gTTS remains as an emergency fallback.'
+                : 'SpeechT5 is not preloaded. Run scripts/start_ai_services.ps1 or scripts/speecht5_synthesize.py --preload before a live demo.',
+            'verified_metrics' => [
+                'provider' => 'speecht5',
+                'model' => $ttsHealth['primary']['model'] ?? 'microsoft/speecht5_tts',
+                'service_ready' => (bool)($ttsHealth['service']['success'] ?? false),
+                'preload_ready' => (bool)($ttsHealth['primary']['preload']['ready'] ?? false),
+                'preload_bytes' => (int)($ttsHealth['primary']['preload']['bytes'] ?? 0),
+                'fallback_available' => $ttsHealth['fallback']['status'] === 'available',
+            ],
         ],
     ];
 }
@@ -487,11 +616,38 @@ function synthesize_with_script(string $script, string $text, string $target, st
     }
 }
 
-function generate_gtts_audio(array $user, string $text, string $language = 'en'): array
+function clean_narration_text(string $text): string
+{
+    $text = html_entity_decode(strip_tags($text), ENT_QUOTES | ENT_HTML5, 'UTF-8');
+    $replacements = [
+        "\xE2\x80\x98" => "'",
+        "\xE2\x80\x99" => "'",
+        "\xE2\x80\x9C" => '"',
+        "\xE2\x80\x9D" => '"',
+        "\xE2\x80\x93" => ', ',
+        "\xE2\x80\x94" => ', ',
+        "\xC2\xA0" => ' ',
+        'ﬁ' => 'fi',
+        'ﬂ' => 'fl',
+    ];
+    $text = strtr($text, $replacements);
+    $text = preg_replace('/https?:\/\/\S+/i', ' ', $text) ?? $text;
+    $text = preg_replace('/([A-Za-z])-\s+([A-Za-z])/', '$1$2', $text) ?? $text;
+    $text = preg_replace('/\s+([,.;:!?])/', '$1', $text) ?? $text;
+    $text = preg_replace('/([,.;:!?])([A-Za-z])/', '$1 $2', $text) ?? $text;
+    $text = preg_replace('/[^A-Za-z0-9\s.,;:!?\'"()\/%-]/u', ' ', $text) ?? $text;
+    $text = preg_replace('/\s{2,}/', ' ', $text) ?? $text;
+    return trim($text);
+}
+
+function generate_gtts_audio(array $user, string $text, string $language = 'en', bool $failHard = true): ?array
 {
     [$relativeDirectory, $targetDirectory] = prepare_tts_storage($user);
     $script = realpath(__DIR__ . '/../../scripts/gtts_synthesize.py');
     if (!$script) {
+        if (!$failHard) {
+            return null;
+        }
         Response::error('The gTTS narration service is not installed', 503);
     }
 
@@ -500,6 +656,9 @@ function generate_gtts_audio(array $user, string $text, string $language = 'en')
     if (!is_file($target) || filesize($target) === 0) {
         $result = synthesize_with_script($script, $text, $target, $language, 'ines-gtts-');
         if (!$result) {
+            if (!$failHard) {
+                return null;
+            }
             Response::error('gTTS could not generate this narration. Check the internet connection and try again.', 503);
         }
     }
@@ -514,6 +673,28 @@ function generate_gtts_audio(array $user, string $text, string $language = 'en')
     ];
 }
 
+function generate_speecht5_service_audio(string $text, string $target, string $language = 'en'): ?array
+{
+    $result = service_json_post('http://127.0.0.1:5007/synthesize', [
+        'text' => $text,
+        'language' => $language,
+    ], 20);
+    if (!($result['success'] ?? false) || empty($result['audio_base64'])) {
+        return null;
+    }
+
+    $audio = base64_decode((string)$result['audio_base64'], true);
+    if ($audio === false || strlen($audio) <= 44) {
+        return null;
+    }
+    if (file_put_contents($target, $audio) === false || !is_file($target) || filesize($target) === 0) {
+        @unlink($target);
+        return null;
+    }
+
+    return $result;
+}
+
 function generate_speecht5_audio(array $user, string $text, string $language = 'en'): ?array
 {
     [$relativeDirectory, $targetDirectory] = prepare_tts_storage($user);
@@ -525,9 +706,15 @@ function generate_speecht5_audio(array $user, string $text, string $language = '
     $filename = hash('sha256', 'speecht5|' . $language . '|' . $text) . '.wav';
     $target = $targetDirectory . DIRECTORY_SEPARATOR . $filename;
     if (!is_file($target) || filesize($target) === 0) {
-        $result = synthesize_with_script($script, $text, $target, $language, 'ines-speecht5-');
-        if (!$result) {
-            return null;
+        $serviceResult = generate_speecht5_service_audio($text, $target, $language);
+        if (!$serviceResult) {
+            if (!warm_speecht5_model()) {
+                return null;
+            }
+            $result = synthesize_with_script($script, $text, $target, $language, 'ines-speecht5-');
+            if (!$result) {
+                return null;
+            }
         }
     }
 
@@ -541,9 +728,9 @@ function generate_speecht5_audio(array $user, string $text, string $language = '
     ];
 }
 
-function generate_narration_audio(array $user, string $text, string $language = 'en'): array
+function generate_narration_audio(array $user, string $text, string $language = 'en', string $preference = 'speecht5'): array
 {
-    $text = trim($text);
+    $text = clean_narration_text($text);
     if ($text === '') {
         Response::error('Text is required for audio narration', 422);
     }
@@ -552,6 +739,19 @@ function generate_narration_audio(array $user, string $text, string $language = 
     }
     if ($language !== 'en') {
         Response::error('Only English narration is currently enabled', 422);
+    }
+
+    $preference = strtolower(trim($preference));
+    if (in_array($preference, ['clear', 'gtts', 'google'], true)) {
+        $gtts = generate_gtts_audio($user, $text, $language, false);
+        if ($gtts) {
+            return $gtts;
+        }
+        $speechT5 = generate_speecht5_audio($user, $text, $language);
+        if ($speechT5) {
+            return $speechT5;
+        }
+        Response::error('No text-to-speech provider could generate this narration.', 503);
     }
 
     $speechT5 = generate_speecht5_audio($user, $text, $language);
@@ -789,11 +989,15 @@ function route(string $method, string $path): void
         } catch (Throwable) {
             $databaseOk = false;
         }
+        $uploadsWritable = is_writable(__DIR__ . '/../uploads');
+        $ttsHealth = tts_health();
+        $speechT5Ready = (bool)($ttsHealth['primary']['success'] ?? false);
         Response::ok([
-            'status' => $databaseOk ? 'ok' : 'degraded',
+            'status' => ($databaseOk && $uploadsWritable && $speechT5Ready) ? 'ok' : 'degraded',
             'service' => 'INES backend',
             'database' => $databaseOk ? 'connected' : 'unavailable',
-            'uploads_writable' => is_writable(__DIR__ . '/../uploads'),
+            'uploads_writable' => $uploadsWritable,
+            'tts' => $ttsHealth,
             'timestamp' => gmdate('c'),
         ]);
     }
@@ -3208,7 +3412,12 @@ function route(string $method, string $path): void
         $user = current_user();
         $data = body();
         $text = trim((string)($data['text'] ?? ''));
-        $audio = generate_narration_audio($user, $text, (string)($data['language'] ?? 'en'));
+        $audio = generate_narration_audio(
+            $user,
+            $text,
+            (string)($data['language'] ?? 'en'),
+            (string)($data['provider'] ?? $data['voice'] ?? 'speecht5')
+        );
         pdo()->prepare('INSERT INTO tts_logs (user_id, book_id, text_length, provider, status) VALUES (:user_id, :book_id, :text_length, :provider, "success")')
             ->execute([
                 ':user_id' => $user['id'],

@@ -75,12 +75,17 @@ The latest CPU-bounded evaluation is tracked in
 
 Book narration follows this order:
 
-1. Microsoft SpeechT5 Transformer TTS through `scripts/speecht5_synthesize.py`;
-2. Google gTTS through `scripts/gtts_synthesize.py` if the local model is unavailable or cannot generate audio.
+1. Microsoft SpeechT5 Transformer TTS through the persistent local service in `scripts/speecht5_tts_service.py` on port `5007`;
+2. Microsoft SpeechT5 CLI synthesis through `scripts/speecht5_synthesize.py` if the service is unavailable;
+3. Google gTTS through `scripts/gtts_synthesize.py` if the local model cannot generate audio.
 
 SpeechT5 produces local WAV narration, while gTTS produces MP3 fallback audio.
 This keeps the defended system Transformer-based for voice input and audio
 reading, while preserving a reliable fallback for demonstrations.
+Local startup starts the SpeechT5 service so the model stays loaded in memory,
+then verifies readiness through backend `/health` under `data.tts`. The older
+preload file `tmp/speecht5-preload.wav` remains as a readiness artifact and
+fallback check.
 
 For defense preparation and the answers to the project questions, see
 `docs/INES_Digital_Library_Defense_QA.docx`.

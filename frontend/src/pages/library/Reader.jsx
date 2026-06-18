@@ -9,6 +9,26 @@ import Card from '../../components/Card.jsx';
 import DataState from '../../components/DataState.jsx';
 import PageHeader from '../../components/PageHeader.jsx';
 import { useAsync } from '../../hooks/useAsync.js';
+import { playPreparedAudio, prepareAudioElement } from '../../utils/audioPlayback.js';
+
+const MAX_NARRATION_CHARS = 320;
+const NARRATION_TIMEOUT_MS = 90000;
+
+function narrationExcerpt(text, maxLength = MAX_NARRATION_CHARS) {
+  const clean = String(text || '').replace(/\s+/g, ' ').trim();
+  if (clean.length <= maxLength) return clean;
+  const excerpt = clean.slice(0, maxLength);
+  const boundary = Math.max(excerpt.lastIndexOf('. '), excerpt.lastIndexOf('? '), excerpt.lastIndexOf('! '));
+  return (boundary > 120 ? excerpt.slice(0, boundary + 1) : excerpt).trim();
+}
+
+function withTimeout(promise, timeoutMs, message) {
+  let timer = 0;
+  const timeout = new Promise((_, reject) => {
+    timer = window.setTimeout(() => reject(new Error(message)), timeoutMs);
+  });
+  return Promise.race([promise, timeout]).finally(() => window.clearTimeout(timer));
+}
 
 export default function Reader() {
   const { id } = useParams();
@@ -18,9 +38,12 @@ export default function Reader() {
   const [rate, setRate] = useState(1);
   const [navigationBusy, setNavigationBusy] = useState(false);
   const [preparedAudioUrl, setPreparedAudioUrl] = useState('');
+  const [audioReady, setAudioReady] = useState(false);
   const initializedRef = useRef(false);
   const audioRef = useRef(null);
   const startedAtRef = useRef(0);
+  const preparedAudioPromiseRef = useRef(null);
+  const preparedAudioTextRef = useRef('');
 
   const bookState = useAsync(() => booksApi.getBook(id), [id]);
   const pageState = useAsync(() => booksApi.getBookPage(id, pageNumber), [id, pageNumber]);
@@ -35,6 +58,7 @@ export default function Reader() {
     ? [book.title, book.description].filter(Boolean).join('. ')
     : '';
   const narratableText = currentText || fallbackText;
+  const narrationText = narrationExcerpt(narratableText);
   const progress = Math.min(100, Math.round((pageNumber / totalPages) * 100));
   const viewerUrl = readableFile?.file_type === 'pdf' ? booksApi.bookPageImageUrl(id, pageNumber) : '';
 
@@ -48,15 +72,15 @@ export default function Reader() {
   useEffect(() => () => audioRef.current?.pause(), []);
 
   useEffect(() => {
-    if (pageState.loading || !narratableText) {
-      setPreparedAudioUrl('');
+    if (!preparedAudioUrl || !audioRef.current) {
+      setAudioReady(false);
       return undefined;
     }
     let active = true;
-    setPreparedAudioUrl('');
-    ttsApi.synthesize({ book_id: Number(id), text: narratableText, language: 'en' })
-      .then((response) => {
-        if (active) setPreparedAudioUrl(ttsApi.audioUrl(response.data.audio_url));
+    setAudioReady(false);
+    prepareAudioElement(audioRef.current, preparedAudioUrl, rate)
+      .then(() => {
+        if (active) setAudioReady(true);
       })
       .catch((error) => {
         if (active) setSpeechError(error.message);
@@ -64,7 +88,41 @@ export default function Reader() {
     return () => {
       active = false;
     };
-  }, [id, pageNumber, narratableText, pageState.loading]);
+  }, [preparedAudioUrl, rate]);
+
+  useEffect(() => {
+    if (pageState.loading || !narrationText) {
+      setPreparedAudioUrl('');
+      setAudioReady(false);
+      preparedAudioPromiseRef.current = null;
+      preparedAudioTextRef.current = '';
+      return undefined;
+    }
+    let active = true;
+    setPreparedAudioUrl('');
+    setAudioReady(false);
+    preparedAudioTextRef.current = narrationText;
+    preparedAudioPromiseRef.current = withTimeout(
+      ttsApi.synthesize({ book_id: Number(id), text: narrationText, language: 'en', provider: 'clear' }),
+      NARRATION_TIMEOUT_MS,
+      'Narration preparation is taking too long. Try a shorter page section.'
+    )
+      .then((response) => {
+        const audioUrl = ttsApi.audioUrl(response.data.audio_url);
+        if (active && preparedAudioTextRef.current === narrationText) {
+          setPreparedAudioUrl(audioUrl);
+        }
+        return audioUrl;
+      })
+      .catch((error) => {
+        if (active) setSpeechError(error.message);
+        throw error;
+      });
+    preparedAudioPromiseRef.current.catch(() => {});
+    return () => {
+      active = false;
+    };
+  }, [id, pageNumber, narrationText, pageState.loading]);
 
   async function saveProgress(nextPage = pageNumber, readingSeconds = 0) {
     const percentage = Math.min(100, Math.round((nextPage / totalPages) * 100));
@@ -91,27 +149,69 @@ export default function Reader() {
       setSpeechError('This page does not contain readable English text yet.');
       return;
     }
-    if (speechState === 'paused') {
-      await audioRef.current?.play();
+    if (audioRef.current && !audioRef.current.paused && !audioRef.current.ended) {
       setSpeechState('playing');
+      return;
+    }
+    if (speechState === 'paused') {
+      try {
+        await playPreparedAudio(audioRef.current, preparedAudioUrl, rate);
+        setSpeechState('playing');
+      } catch (error) {
+        setSpeechError(error.message);
+        setSpeechState('idle');
+      }
       return;
     }
     try {
       setSpeechState('loading');
       let audioUrl = preparedAudioUrl;
       if (!audioUrl) {
-        const response = await ttsApi.synthesize({ book_id: Number(id), text: narratableText, language: 'en' });
-        audioUrl = ttsApi.audioUrl(response.data.audio_url);
+        if (preparedAudioPromiseRef.current && preparedAudioTextRef.current === narrationText) {
+          audioUrl = await preparedAudioPromiseRef.current;
+        } else {
+          const response = await withTimeout(
+            ttsApi.synthesize({ book_id: Number(id), text: narrationText, language: 'en', provider: 'clear' }),
+            NARRATION_TIMEOUT_MS,
+            'Narration preparation is taking too long. Try a shorter page section.'
+          );
+          audioUrl = ttsApi.audioUrl(response.data.audio_url);
+        }
         setPreparedAudioUrl(audioUrl);
       }
-      audioRef.current.src = audioUrl;
-      audioRef.current.playbackRate = rate;
+      if (!audioReady) {
+        await prepareAudioElement(audioRef.current, audioUrl, rate);
+        setAudioReady(true);
+      }
       startedAtRef.current = Date.now();
-      await audioRef.current.play();
+      await playPreparedAudio(audioRef.current, audioUrl, rate);
       setSpeechState('playing');
     } catch (error) {
-      setSpeechError(error.message);
+      setSpeechError(error.name === 'NotAllowedError'
+        ? 'Your browser blocked audio playback. Click Play again after the narration button is ready.'
+        : error.message);
       setSpeechState('idle');
+    }
+  }
+
+  function primeSpeechPlayback() {
+    const audio = audioRef.current;
+    if (!audio || !audioReady || !preparedAudioUrl || speechState !== 'idle') return;
+    audio.muted = false;
+    audio.volume = 1;
+    audio.playbackRate = rate;
+    if (audio.ended || audio.currentTime >= Math.max(0, audio.duration - 0.15)) {
+      audio.currentTime = 0;
+    }
+    startedAtRef.current = Date.now();
+    const attempt = audio.play();
+    if (attempt?.then) {
+      attempt
+        .then(() => {
+          setSpeechError('');
+          setSpeechState('playing');
+        })
+        .catch(() => {});
     }
   }
 
@@ -123,6 +223,7 @@ export default function Reader() {
   async function moveToPage(nextPage) {
     stopSpeech();
     const bounded = Math.min(Math.max(nextPage, 1), totalPages);
+    setAudioReady(false);
     setPageNumber(bounded);
     await saveProgress(bounded);
   }
@@ -140,6 +241,7 @@ export default function Reader() {
         if (!response.data?.is_blank) break;
         candidate += direction;
       }
+      setAudioReady(false);
       setPageNumber(selected);
       await saveProgress(selected);
     } catch (error) {
@@ -151,6 +253,7 @@ export default function Reader() {
 
   async function resetProgress() {
     stopSpeech();
+    setAudioReady(false);
     setPageNumber(1);
     await progressApi.updateProgress(id, {
       last_page: 0,
@@ -211,16 +314,25 @@ export default function Reader() {
             </div>
             <audio
               ref={audioRef}
+              preload="auto"
+              playsInline
+              src={preparedAudioUrl || undefined}
               onEnded={() => {
                 const seconds = Math.max(1, Math.round((Date.now() - startedAtRef.current) / 1000));
                 setSpeechState('idle');
                 saveProgress(pageNumber, seconds).catch(() => {});
               }}
-              onError={() => setSpeechState('idle')}
+              onLoadedData={() => setAudioReady(Boolean(preparedAudioUrl))}
+              onCanPlayThrough={() => setAudioReady(Boolean(preparedAudioUrl))}
+              onPlaying={() => setSpeechState('playing')}
+              onError={() => {
+                setSpeechState('idle');
+                if (preparedAudioUrl) setSpeechError('Narration audio could not be loaded for playback.');
+              }}
             />
             <div className="button-row centered">
               <Button variant="ghost" size="icon" aria-label="Previous narrated page" disabled={pageNumber === 1 || navigationBusy} onClick={() => moveToAdjacentPage(-1)}><SkipBack size={18} /></Button>
-              <Button size="icon" aria-label={speechState === 'paused' ? 'Resume narration' : 'Play page narration'} onClick={speak} disabled={pageState.loading || !narratableText || ['playing', 'loading'].includes(speechState)}><Play size={18} /></Button>
+              <Button size="icon" aria-label={speechState === 'paused' ? 'Resume narration' : 'Play page narration'} onPointerDown={primeSpeechPlayback} onClick={speak} disabled={pageState.loading || !narrationText || !audioReady || ['playing', 'loading'].includes(speechState)}><Play size={18} /></Button>
               <Button variant="secondary" size="icon" aria-label="Pause narration" onClick={pause} disabled={speechState !== 'playing'}><Pause size={18} /></Button>
               <Button variant="ghost" size="icon" aria-label="Stop narration" onClick={stopSpeech} disabled={speechState === 'idle'}><Square size={18} /></Button>
               <Button variant="ghost" size="icon" aria-label="Next narrated page" disabled={pageNumber >= totalPages || navigationBusy} onClick={() => moveToAdjacentPage(1)}><SkipForward size={18} /></Button>

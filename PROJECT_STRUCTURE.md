@@ -40,6 +40,7 @@ communicates with the authenticated PHP routes.
 
 - `scripts/transformer_speech_service.py`: Wav2Vec2 Transformer CTC STT on port `5006`.
 - `scripts/whisper_stt_service.py`: Whisper `tiny.en` fallback on port `5001`.
+- `scripts/speecht5_tts_service.py`: persistent SpeechT5 TTS service on port `5007`.
 - `scripts/speecht5_synthesize.py`: local Microsoft SpeechT5 Transformer WAV narration.
 - `scripts/gtts_synthesize.py`: English MP3 narration with Google gTTS.
 - `scripts/transformer_train_complete.py`: retained path for future Transformer fine-tuning.

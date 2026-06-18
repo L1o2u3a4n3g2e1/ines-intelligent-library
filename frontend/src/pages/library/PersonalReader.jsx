@@ -8,6 +8,10 @@ import Card from '../../components/Card.jsx';
 import DataState from '../../components/DataState.jsx';
 import PageHeader from '../../components/PageHeader.jsx';
 import { useAsync } from '../../hooks/useAsync.js';
+import { playPreparedAudio, prepareAudioElement } from '../../utils/audioPlayback.js';
+
+const MAX_NARRATION_CHARS = 320;
+const NARRATION_TIMEOUT_MS = 90000;
 
 function sectionsFrom(text, maxLength = 2800) {
   const sentences = String(text || '').match(/[^.!?]+[.!?]+|[^.!?]+$/g) || [];
@@ -24,6 +28,22 @@ function sectionsFrom(text, maxLength = 2800) {
   return sections;
 }
 
+function narrationExcerpt(text, maxLength = MAX_NARRATION_CHARS) {
+  const clean = String(text || '').replace(/\s+/g, ' ').trim();
+  if (clean.length <= maxLength) return clean;
+  const excerpt = clean.slice(0, maxLength);
+  const boundary = Math.max(excerpt.lastIndexOf('. '), excerpt.lastIndexOf('? '), excerpt.lastIndexOf('! '));
+  return (boundary > 120 ? excerpt.slice(0, boundary + 1) : excerpt).trim();
+}
+
+function withTimeout(promise, timeoutMs, message) {
+  let timer = 0;
+  const timeout = new Promise((_, reject) => {
+    timer = window.setTimeout(() => reject(new Error(message)), timeoutMs);
+  });
+  return Promise.race([promise, timeout]).finally(() => window.clearTimeout(timer));
+}
+
 export default function PersonalReader() {
   const { id } = useParams();
   const book = useAsync(() => personalBooksApi.getPersonalBook(id), [id]);
@@ -33,10 +53,59 @@ export default function PersonalReader() {
   const [audioState, setAudioState] = useState('idle');
   const [audioError, setAudioError] = useState('');
   const [rate, setRate] = useState(1);
+  const [preparedAudioUrl, setPreparedAudioUrl] = useState('');
+  const [audioReady, setAudioReady] = useState(false);
   const sections = useMemo(() => sectionsFrom(content.data?.text), [content.data?.text]);
   const currentSection = sections[sectionIndex] || '';
+  const narrationText = narrationExcerpt(currentSection);
 
   useEffect(() => () => audioRef.current?.pause(), []);
+
+  useEffect(() => {
+    if (!narrationText) {
+      setPreparedAudioUrl('');
+      setAudioReady(false);
+      return undefined;
+    }
+
+    let active = true;
+    setPreparedAudioUrl('');
+    setAudioReady(false);
+    withTimeout(
+      ttsApi.synthesize({ text: narrationText, language: 'en', provider: 'clear' }),
+      NARRATION_TIMEOUT_MS,
+      'Narration preparation is taking too long. Try a shorter section.'
+    )
+      .then((response) => {
+        if (active) setPreparedAudioUrl(ttsApi.audioUrl(response.data.audio_url));
+      })
+      .catch((error) => {
+        if (active) setAudioError(error.message);
+      });
+
+    return () => {
+      active = false;
+    };
+  }, [narrationText]);
+
+  useEffect(() => {
+    if (!preparedAudioUrl || !audioRef.current) {
+      setAudioReady(false);
+      return undefined;
+    }
+    let active = true;
+    setAudioReady(false);
+    prepareAudioElement(audioRef.current, preparedAudioUrl, rate)
+      .then(() => {
+        if (active) setAudioReady(true);
+      })
+      .catch((error) => {
+        if (active) setAudioError(error.message);
+      });
+    return () => {
+      active = false;
+    };
+  }, [preparedAudioUrl, rate]);
 
   function stop() {
     if (audioRef.current) {
@@ -48,21 +117,49 @@ export default function PersonalReader() {
 
   async function play() {
     setAudioError('');
-    if (audioState === 'paused' && audioRef.current) {
-      await audioRef.current.play();
+    if (audioRef.current && !audioRef.current.paused && !audioRef.current.ended) {
       setAudioState('playing');
+      return;
+    }
+    if (audioState === 'paused' && audioRef.current) {
+      try {
+        await playPreparedAudio(audioRef.current, preparedAudioUrl, rate);
+        setAudioState('playing');
+      } catch (err) {
+        setAudioError(err.message);
+        setAudioState('idle');
+      }
       return;
     }
     try {
       setAudioState('loading');
-      const response = await ttsApi.synthesize({ text: currentSection, language: 'en' });
-      audioRef.current.src = ttsApi.audioUrl(response.data.audio_url);
-      audioRef.current.playbackRate = rate;
-      await audioRef.current.play();
+      await playPreparedAudio(audioRef.current, preparedAudioUrl, rate);
       setAudioState('playing');
     } catch (err) {
-      setAudioError(err.message);
+      setAudioError(err.name === 'NotAllowedError'
+        ? 'Your browser blocked audio playback. Click Play again after the narration button is ready.'
+        : err.message);
       setAudioState('idle');
+    }
+  }
+
+  function primePlayback() {
+    const audio = audioRef.current;
+    if (!audio || !audioReady || !preparedAudioUrl || audioState !== 'idle') return;
+    audio.muted = false;
+    audio.volume = 1;
+    audio.playbackRate = rate;
+    if (audio.ended || audio.currentTime >= Math.max(0, audio.duration - 0.15)) {
+      audio.currentTime = 0;
+    }
+    const attempt = audio.play();
+    if (attempt?.then) {
+      attempt
+        .then(() => {
+          setAudioError('');
+          setAudioState('playing');
+        })
+        .catch(() => {});
     }
   }
 
@@ -73,6 +170,7 @@ export default function PersonalReader() {
 
   function move(next) {
     stop();
+    setAudioReady(false);
     setSectionIndex(Math.min(Math.max(next, 0), Math.max(sections.length - 1, 0)));
   }
 
@@ -94,10 +192,23 @@ export default function PersonalReader() {
               </select>
             </label>
           </div>
-          <audio ref={audioRef} onEnded={() => setAudioState('idle')} onError={() => setAudioState('idle')} />
+          <audio
+            ref={audioRef}
+            preload="auto"
+            playsInline
+            src={preparedAudioUrl || undefined}
+            onEnded={() => setAudioState('idle')}
+            onLoadedData={() => setAudioReady(Boolean(preparedAudioUrl))}
+            onCanPlayThrough={() => setAudioReady(Boolean(preparedAudioUrl))}
+            onPlaying={() => setAudioState('playing')}
+            onError={() => {
+              setAudioState('idle');
+              if (preparedAudioUrl) setAudioError('Narration audio could not be loaded for playback.');
+            }}
+          />
           <div className="button-row centered">
             <Button variant="ghost" size="icon" aria-label="Previous section" disabled={sectionIndex === 0} onClick={() => move(sectionIndex - 1)}><SkipBack size={18} /></Button>
-            <Button size="icon" aria-label="Play narration" disabled={!currentSection || ['playing', 'loading'].includes(audioState)} onClick={play}><Play size={18} /></Button>
+            <Button size="icon" aria-label="Play narration" disabled={!narrationText || !audioReady || ['playing', 'loading'].includes(audioState)} onPointerDown={primePlayback} onClick={play}><Play size={18} /></Button>
             <Button variant="secondary" size="icon" aria-label="Pause narration" disabled={audioState !== 'playing'} onClick={pause}><Pause size={18} /></Button>
             <Button variant="ghost" size="icon" aria-label="Stop narration" disabled={audioState === 'idle'} onClick={stop}><Square size={18} /></Button>
             <Button variant="ghost" size="icon" aria-label="Next section" disabled={!sections.length || sectionIndex >= sections.length - 1} onClick={() => move(sectionIndex + 1)}><SkipForward size={18} /></Button>
