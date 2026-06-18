@@ -65,6 +65,10 @@ backups/
 Thumbs.db
 .DS_Store
 desktop.ini
+~$*
+
+# Generated document/presentation inspection artifacts
+*.inspect.ndjson
 
 # Cache
 .cache/
