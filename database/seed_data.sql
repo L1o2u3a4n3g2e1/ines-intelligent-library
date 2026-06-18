@@ -117,13 +117,13 @@ ON DUPLICATE KEY UPDATE status = 'active';
 INSERT INTO reading_lists (lecturer_id, course_id, title, description, visibility, status)
 SELECT u.id, c.id, 'HCI Week 1', 'Core introductions for interaction design and accessibility discussions.', 'published', 'active'
 FROM users u, courses c
-WHERE u.email = 'lecturer@ines.ac.rw' AND c.code = 'HCI201'
+WHERE u.email = 'lecturer@gmail.com' AND c.code = 'HCI201'
   AND NOT EXISTS (SELECT 1 FROM reading_lists rl WHERE rl.lecturer_id = u.id AND rl.course_id = c.id AND rl.title = 'HCI Week 1');
 
 INSERT INTO reading_lists (lecturer_id, course_id, title, description, visibility, status)
 SELECT u.id, c.id, 'Database Core Reading', 'Database and digital-library architecture materials for practical labs.', 'draft', 'active'
 FROM users u, courses c
-WHERE u.email = 'lecturer@ines.ac.rw' AND c.code = 'DLS101'
+WHERE u.email = 'lecturer@gmail.com' AND c.code = 'DLS101'
   AND NOT EXISTS (SELECT 1 FROM reading_lists rl WHERE rl.lecturer_id = u.id AND rl.course_id = c.id AND rl.title = 'Database Core Reading');
 
 INSERT INTO reading_list_books (reading_list_id, book_id, requirement_type, sort_order, status)
