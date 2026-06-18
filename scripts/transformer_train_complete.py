@@ -389,11 +389,15 @@ def train(args: argparse.Namespace) -> dict:
     epochs_started = 0
     epochs_completed = 0
     training_examples_processed = 0
-    while step < args.max_steps and time.time() < deadline:
+    target_steps = args.max_steps
+    if args.epochs is not None:
+        target_steps = max(1, math.ceil(len(loader) * args.epochs))
+
+    while step < target_steps and time.time() < deadline:
         epochs_started += 1
         batches_processed_this_epoch = 0
         for batch in loader:
-            if step >= args.max_steps or time.time() >= deadline:
+            if step >= target_steps or time.time() >= deadline:
                 break
             optimizer.zero_grad(set_to_none=True)
             outputs = model(
@@ -457,7 +461,8 @@ def train(args: argparse.Namespace) -> dict:
         "training_examples_processed": training_examples_processed,
         "learning_rate": args.learning_rate,
         "batch_size": args.batch_size,
-        "max_steps": args.max_steps,
+        "requested_epochs": args.epochs,
+        "max_steps": target_steps,
         "time_budget_minutes": args.time_budget_minutes,
         "train_mode": args.train_mode,
         "trainable_parameters": trainable,
@@ -505,6 +510,7 @@ def parse_args(argv: Iterable[str] | None = None) -> argparse.Namespace:
     parser.add_argument("--max-test-samples", type=int, default=20)
     parser.add_argument("--max-audio-seconds", type=float, default=8.0)
     parser.add_argument("--max-steps", type=int, default=12)
+    parser.add_argument("--epochs", type=float, default=None)
     parser.add_argument("--batch-size", type=int, default=1)
     parser.add_argument("--learning-rate", type=float, default=1e-5)
     parser.add_argument("--time-budget-minutes", type=float, default=55.0)
