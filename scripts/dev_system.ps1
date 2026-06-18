@@ -5,8 +5,8 @@ $xamppRoot = if ($env:XAMPP_ROOT) { $env:XAMPP_ROOT } else { 'C:\xampp' }
 $vite = Join-Path $root 'node_modules\.bin\vite.cmd'
 
 function Get-PortListener([int]$Port) {
-    return Get-NetTCPConnection -State Listen -LocalPort $Port -ErrorAction SilentlyContinue |
-        Select-Object -First 1
+    $pattern = "^\s*TCP\s+\S+:$Port\s+\S+\s+LISTENING\s+\d+"
+    return netstat -ano -p tcp | Select-String -Pattern $pattern | Select-Object -First 1
 }
 
 function Wait-ForPort([string]$Name, [int]$Port, [int]$TimeoutSeconds) {
@@ -22,7 +22,7 @@ function Wait-ForPort([string]$Name, [int]$Port, [int]$TimeoutSeconds) {
     throw "$Name did not start on port $Port within $TimeoutSeconds seconds."
 }
 
-function Start-XamppService([string]$Name, [int]$Port, [string]$StarterName) {
+function Start-XamppService([string]$Name, [int]$Port, [string]$StarterName, [int]$TimeoutSeconds = 60) {
     if (Get-PortListener $Port) {
         Write-Host "[ready] $Name already running on port $Port" -ForegroundColor Green
         return
@@ -38,7 +38,7 @@ function Start-XamppService([string]$Name, [int]$Port, [string]$StarterName) {
         -ArgumentList @('/d', '/s', '/c', "`"$starter`"") `
         -WorkingDirectory $xamppRoot `
         -WindowStyle Hidden
-    Wait-ForPort $Name $Port 45
+    Wait-ForPort $Name $Port $TimeoutSeconds
 }
 
 Set-Location $root
@@ -51,7 +51,7 @@ Write-Host ''
 Write-Host 'INES Digital Library development system' -ForegroundColor Cyan
 Write-Host '---------------------------------------'
 
-Start-XamppService 'Apache' 80 'apache_start.bat'
+Start-XamppService 'Apache' 80 'apache_start.bat' 120
 Start-XamppService 'MySQL' 3306 'mysql_start.bat'
 
 Write-Host '[start] Speech services' -ForegroundColor Cyan
@@ -81,4 +81,4 @@ Write-Host 'Application: http://127.0.0.1:3000' -ForegroundColor Yellow
 Write-Host 'Press Ctrl+C to stop the Vite development server.'
 Write-Host ''
 
-& $vite --host 127.0.0.1 --port 3000
+& $vite --host 127.0.0.1 --port 3000 --strictPort

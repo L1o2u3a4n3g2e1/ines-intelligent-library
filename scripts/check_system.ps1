@@ -8,6 +8,11 @@ $checks = @(
     @{ Name = 'SpeechT5 TTS service'; Url = 'http://127.0.0.1:5007/health' }
 )
 
+function Test-PortListener([int]$Port) {
+    $pattern = "^\s*TCP\s+\S+:$Port\s+\S+\s+LISTENING\s+\d+"
+    return [bool](netstat -ano -p tcp | Select-String -Pattern $pattern | Select-Object -First 1)
+}
+
 foreach ($check in $checks) {
     try {
         $response = Invoke-WebRequest -Uri $check.Url -UseBasicParsing -TimeoutSec 5
@@ -34,8 +39,7 @@ try {
 }
 
 $ports = 80, 3000, 3306, 5001, 5006, 5007
-$listeners = Get-NetTCPConnection -State Listen -ErrorAction SilentlyContinue
 foreach ($port in $ports) {
-    $listening = $listeners | Where-Object LocalPort -eq $port
+    $listening = Test-PortListener $port
     [pscustomobject]@{ Service = "Port $port"; Status = $(if ($listening) { 'PASS' } else { 'FAIL' }); HttpStatus = ''; Url = '' }
 }
