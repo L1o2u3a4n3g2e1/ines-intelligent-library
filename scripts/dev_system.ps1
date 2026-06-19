@@ -92,4 +92,14 @@ Write-Host 'Application: http://127.0.0.1:3000' -ForegroundColor Yellow
 Write-Host 'Press Ctrl+C to stop the Vite development server.'
 Write-Host ''
 
+if (Get-PortListener 3000) {
+    try {
+        Invoke-WebRequest -Uri 'http://127.0.0.1:3000/login' -UseBasicParsing -TimeoutSec 5 | Out-Null
+        Write-Host '[ready] Vite frontend already running on http://127.0.0.1:3000' -ForegroundColor Green
+        return
+    } catch {
+        throw 'Port 3000 is already in use, but the frontend did not respond at /login. Stop the process using port 3000, then run npm run dev again.'
+    }
+}
+
 & $vite --host 127.0.0.1 --port 3000 --strictPort
