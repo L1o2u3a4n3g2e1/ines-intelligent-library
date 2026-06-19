@@ -3,6 +3,13 @@ $ErrorActionPreference = 'Stop'
 $root = Split-Path -Parent $PSScriptRoot
 $xamppRoot = if ($env:XAMPP_ROOT) { $env:XAMPP_ROOT } else { 'C:\xampp' }
 $vite = Join-Path $root 'node_modules\.bin\vite.cmd'
+$EnableWhisperFallbackStt = $true
+$EnableTransformerStt = $true
+$EnableSpeechT5Tts = $true
+$flags = Join-Path $PSScriptRoot 'speech_service_flags.ps1'
+if (Test-Path -LiteralPath $flags) {
+    . $flags
+}
 
 function Get-PortListener([int]$Port) {
     $pattern = "^\s*TCP\s+\S+:$Port\s+\S+\s+LISTENING\s+\d+"
@@ -56,9 +63,9 @@ Start-XamppService 'MySQL' 3306 'mysql_start.bat'
 
 Write-Host '[start] Speech services' -ForegroundColor Cyan
 & (Join-Path $PSScriptRoot 'start_ai_services.ps1') | Format-Table -AutoSize
-Wait-ForPort 'Whisper fallback STT' 5001 120
-Wait-ForPort 'Wav2Vec2 Transformer STT' 5006 120
-Wait-ForPort 'SpeechT5 TTS service' 5007 180
+if ($EnableWhisperFallbackStt) { Wait-ForPort 'Whisper fallback STT' 5001 120 } else { Write-Host '[skip] Whisper fallback STT disabled' -ForegroundColor Yellow }
+if ($EnableTransformerStt) { Wait-ForPort 'Wav2Vec2 Transformer STT' 5006 120 } else { Write-Host '[skip] Wav2Vec2 Transformer STT disabled' -ForegroundColor Yellow }
+if ($EnableSpeechT5Tts) { Wait-ForPort 'SpeechT5 TTS service' 5007 180 } else { Write-Host '[skip] SpeechT5 TTS disabled' -ForegroundColor Yellow }
 
 $backend = Invoke-RestMethod -Uri 'http://localhost/digital-library/backend/health' -TimeoutSec 10
 $backendStatus = if ($backend.data -and $backend.data.status) { $backend.data.status } else { '' }
@@ -67,14 +74,18 @@ if ($backend.data.database -ne 'connected' -or -not $backend.data.uploads_writab
 }
 Write-Host '[ready] PHP backend, database, and uploads' -ForegroundColor Green
 
-$ttsReady = $backend.data.tts -and (
-    ($backend.data.tts.service -and $backend.data.tts.service.success) -or
-    ($backend.data.tts.primary -and $backend.data.tts.primary.success)
-)
-if (-not $ttsReady) {
-    throw 'SpeechT5 is not preloaded according to backend health. Run scripts/start_ai_services.ps1 and check the SpeechT5 output.'
+if ($EnableSpeechT5Tts) {
+    $ttsReady = $backend.data.tts -and (
+        ($backend.data.tts.service -and $backend.data.tts.service.success) -or
+        ($backend.data.tts.primary -and $backend.data.tts.primary.success)
+    )
+    if (-not $ttsReady) {
+        throw 'SpeechT5 is not preloaded according to backend health. Run scripts/start_ai_services.ps1 and check the SpeechT5 output.'
+    }
+    Write-Host '[ready] SpeechT5 TTS preload verified by backend health' -ForegroundColor Green
+} else {
+    Write-Host '[skip] SpeechT5 TTS preload check disabled' -ForegroundColor Yellow
 }
-Write-Host '[ready] SpeechT5 TTS preload verified by backend health' -ForegroundColor Green
 
 Write-Host ''
 Write-Host 'Application: http://127.0.0.1:3000' -ForegroundColor Yellow

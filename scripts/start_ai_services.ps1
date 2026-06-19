@@ -4,12 +4,25 @@ $root = Split-Path -Parent $PSScriptRoot
 $python = 'C:\Users\Anne Louange\AppData\Local\Programs\Python\Python311\python.exe'
 $logDirectory = Join-Path $root 'logs'
 $tmpDirectory = Join-Path $root 'tmp'
+$EnableWhisperFallbackStt = $true
+$EnableTransformerStt = $true
+$EnableSpeechT5Tts = $true
+$flags = Join-Path $PSScriptRoot 'speech_service_flags.ps1'
+if (Test-Path -LiteralPath $flags) {
+    . $flags
+}
 New-Item -ItemType Directory -Force -Path $logDirectory | Out-Null
 New-Item -ItemType Directory -Force -Path $tmpDirectory | Out-Null
+
+function Get-PortListener([int]$Port) {
+    $pattern = "^\s*TCP\s+\S+:$Port\s+\S+\s+LISTENING\s+\d+"
+    return netstat -ano -p tcp | Select-String -Pattern $pattern | Select-Object -First 1
+}
 
 $services = @(
     @{
         Name = 'Open-vocabulary STT'
+        Enabled = $EnableWhisperFallbackStt
         Port = 5001
         Script = 'scripts\whisper_stt_service.py'
         Output = 'whisper-stt.out.log'
@@ -17,6 +30,7 @@ $services = @(
     },
     @{
         Name = 'Transformer STT'
+        Enabled = $EnableTransformerStt
         Port = 5006
         Script = 'scripts\transformer_speech_service.py'
         Output = 'transformer-stt.out.log'
@@ -24,6 +38,7 @@ $services = @(
     },
     @{
         Name = 'SpeechT5 TTS service'
+        Enabled = $EnableSpeechT5Tts
         Port = 5007
         Script = 'scripts\speecht5_tts_service.py'
         Output = 'speecht5-tts.out.log'
@@ -32,7 +47,11 @@ $services = @(
 )
 
 foreach ($service in $services) {
-    $listener = Get-NetTCPConnection -State Listen -LocalPort $service.Port -ErrorAction SilentlyContinue
+    if (-not $service.Enabled) {
+        [pscustomobject]@{ Service = $service.Name; Status = 'DISABLED'; ProcessId = ''; Port = $service.Port }
+        continue
+    }
+    $listener = Get-PortListener $service.Port
     if (!$listener) {
         $process = Start-Process `
             -FilePath $python `
@@ -46,6 +65,17 @@ foreach ($service in $services) {
     } else {
         [pscustomobject]@{ Service = $service.Name; Status = 'RUNNING'; ProcessId = $listener.OwningProcess; Port = $service.Port }
     }
+}
+
+if (-not $EnableSpeechT5Tts) {
+    [pscustomobject]@{
+        Service = 'SpeechT5 TTS'
+        Status = 'PRELOAD_SKIPPED_DISABLED'
+        ProcessId = ''
+        Port = 5007
+        PreloadBytes = ''
+    }
+    return
 }
 
 $preloadFile = Join-Path $tmpDirectory 'speecht5-preload.wav'

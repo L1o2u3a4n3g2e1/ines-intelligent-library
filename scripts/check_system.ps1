@@ -1,11 +1,18 @@
 $ErrorActionPreference = 'Stop'
+$EnableWhisperFallbackStt = $true
+$EnableTransformerStt = $true
+$EnableSpeechT5Tts = $true
+$flags = Join-Path $PSScriptRoot 'speech_service_flags.ps1'
+if (Test-Path -LiteralPath $flags) {
+    . $flags
+}
 
 $checks = @(
-    @{ Name = 'Frontend'; Url = 'http://127.0.0.1:3000/login' },
-    @{ Name = 'Backend'; Url = 'http://localhost/digital-library/backend/health' },
-    @{ Name = 'Open-vocabulary STT'; Url = 'http://127.0.0.1:5001/health' },
-    @{ Name = 'Transformer STT'; Url = 'http://127.0.0.1:5006/health' },
-    @{ Name = 'SpeechT5 TTS service'; Url = 'http://127.0.0.1:5007/health' }
+    @{ Name = 'Frontend'; Url = 'http://127.0.0.1:3000/login'; Enabled = $true },
+    @{ Name = 'Backend'; Url = 'http://localhost/digital-library/backend/health'; Enabled = $true },
+    @{ Name = 'Open-vocabulary STT'; Url = 'http://127.0.0.1:5001/health'; Enabled = $EnableWhisperFallbackStt },
+    @{ Name = 'Transformer STT'; Url = 'http://127.0.0.1:5006/health'; Enabled = $EnableTransformerStt },
+    @{ Name = 'SpeechT5 TTS service'; Url = 'http://127.0.0.1:5007/health'; Enabled = $EnableSpeechT5Tts }
 )
 
 function Test-PortListener([int]$Port) {
@@ -14,6 +21,10 @@ function Test-PortListener([int]$Port) {
 }
 
 foreach ($check in $checks) {
+    if (-not $check.Enabled) {
+        [pscustomobject]@{ Service = $check.Name; Status = 'SKIP'; HttpStatus = ''; Url = 'disabled in scripts/speech_service_flags.ps1' }
+        continue
+    }
     try {
         $response = Invoke-WebRequest -Uri $check.Url -UseBasicParsing -TimeoutSec 5
         [pscustomobject]@{ Service = $check.Name; Status = 'PASS'; HttpStatus = $response.StatusCode; Url = $check.Url }
@@ -23,23 +34,37 @@ foreach ($check in $checks) {
 }
 
 try {
-    $backendHealth = Invoke-RestMethod -Uri 'http://localhost/digital-library/backend/health' -TimeoutSec 30
-    $ttsReady = $backendHealth.data.tts -and (
-        ($backendHealth.data.tts.service -and $backendHealth.data.tts.service.success) -or
-        ($backendHealth.data.tts.primary -and $backendHealth.data.tts.primary.success)
-    )
+    $ttsReady = $false
+    if ($EnableSpeechT5Tts) {
+        $backendHealth = Invoke-RestMethod -Uri 'http://localhost/digital-library/backend/health' -TimeoutSec 30
+        $ttsReady = $backendHealth.data.tts -and (
+            ($backendHealth.data.tts.service -and $backendHealth.data.tts.service.success) -or
+            ($backendHealth.data.tts.primary -and $backendHealth.data.tts.primary.success)
+        )
+    }
     [pscustomobject]@{
         Service = 'SpeechT5 TTS preload'
-        Status = $(if ($ttsReady) { 'PASS' } else { 'FAIL' })
+        Status = $(if (-not $EnableSpeechT5Tts) { 'SKIP' } elseif ($ttsReady) { 'PASS' } else { 'FAIL' })
         HttpStatus = ''
-        Url = 'backend /health data.tts.primary'
+        Url = $(if ($EnableSpeechT5Tts) { 'backend /health data.tts.primary' } else { 'disabled in scripts/speech_service_flags.ps1' })
     }
 } catch {
     [pscustomobject]@{ Service = 'SpeechT5 TTS preload'; Status = 'FAIL'; HttpStatus = ''; Url = 'backend /health data.tts.primary' }
 }
 
-$ports = 80, 3000, 3306, 5001, 5006, 5007
+$ports = @(
+    @{ Port = 80; Enabled = $true },
+    @{ Port = 3000; Enabled = $true },
+    @{ Port = 3306; Enabled = $true },
+    @{ Port = 5001; Enabled = $EnableWhisperFallbackStt },
+    @{ Port = 5006; Enabled = $EnableTransformerStt },
+    @{ Port = 5007; Enabled = $EnableSpeechT5Tts }
+)
 foreach ($port in $ports) {
-    $listening = Test-PortListener $port
-    [pscustomobject]@{ Service = "Port $port"; Status = $(if ($listening) { 'PASS' } else { 'FAIL' }); HttpStatus = ''; Url = '' }
+    if (-not $port.Enabled) {
+        [pscustomobject]@{ Service = "Port $($port.Port)"; Status = 'SKIP'; HttpStatus = ''; Url = 'disabled in scripts/speech_service_flags.ps1' }
+        continue
+    }
+    $listening = Test-PortListener $port.Port
+    [pscustomobject]@{ Service = "Port $($port.Port)"; Status = $(if ($listening) { 'PASS' } else { 'FAIL' }); HttpStatus = ''; Url = '' }
 }
