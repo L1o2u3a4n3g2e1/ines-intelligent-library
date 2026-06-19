@@ -1,4 +1,4 @@
-import { Download, Upload } from 'lucide-react';
+import { Upload } from 'lucide-react';
 import { useState } from 'react';
 import * as booksApi from '../../api/books.js';
 import Button from '../../components/Button.jsx';
@@ -47,7 +47,7 @@ export default function UploadBooks() {
       setFile(null);
       setMessage(response.data?.converted_to_pdf
         ? `${response.data.source_name} was converted to PDF and is ready for reading and audio narration.`
-        : 'Book file uploaded and ready for reading, download, or playback.');
+        : 'Book file uploaded and ready for reading and audio narration.');
       books.reload();
     } catch (err) {
       setError(err.message);
@@ -106,7 +106,6 @@ export default function UploadBooks() {
               { key: 'original_name', label: 'File' },
               { key: 'file_type', label: 'Type' },
               { key: 'size', label: 'Size' },
-              { key: 'download', label: 'Download', render: (row) => <a className="button button-ghost button-sm" href={booksApi.fileDownloadUrl(row.id)}><Download size={15} /> Download</a> },
             ]}
             rows={rows}
           />
