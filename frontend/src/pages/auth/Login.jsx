@@ -35,8 +35,8 @@ export default function Login() {
         <div className="login-showcase-copy">
           <img className="login-logo" src="/ines-logo.png" alt="INES-Ruhengeri logo" />
           <p className="eyebrow">INES-Ruhengeri</p>
-          <h1>Welcome to INES Digital Library</h1>
-          <p>Discover academic resources, explore faculty collections, submit books for approval, and listen with intelligent English narration.</p>
+          <h1>Search. Read. Listen.</h1>
+          <p>Access INES academic resources through a modern digital library with voice search, online reading, and intelligent English narration.</p>
         </div>
       </section>
       <section className="auth-panel login-panel">
@@ -44,7 +44,7 @@ export default function Login() {
           <img src="/ines-logo.png" alt="" />
           <div>
             <strong>INES Digital Library</strong>
-            <span>Knowledge, research, and intelligent access</span>
+            <span>Voice-powered academic access</span>
           </div>
         </div>
         <h2>Sign in to your account</h2>
